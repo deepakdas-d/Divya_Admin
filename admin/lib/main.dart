@@ -1,4 +1,5 @@
 import 'package:admin/Auth/sigin.dart';
+
 import 'package:admin/firebase_options.dart';
 import 'package:admin/home.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
       ),
-      home: AuthWrapper(),
+      home: Dashboard(), // Use AuthWrapper to manage authentication state
     );
   }
 }
