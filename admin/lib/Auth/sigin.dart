@@ -4,7 +4,6 @@ import 'package:admin/home.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
 import 'package:flutter/services.dart';
 
 class Sigin extends StatefulWidget {
@@ -15,23 +14,23 @@ class Sigin extends StatefulWidget {
 }
 
 class SiginState extends State<Sigin> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _emailOrPhoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
-  bool isEmailEmpty = true;
-  bool isEmailValid = false;
+  bool isInputEmpty = true;
+  bool isInputValid = false;
 
   @override
   void initState() {
     super.initState();
 
-    _emailController.addListener(() {
-      final email = _emailController.text.trim();
+    _emailOrPhoneController.addListener(() {
+      final input = _emailOrPhoneController.text.trim();
 
       setState(() {
-        isEmailEmpty = email.isEmpty;
-        isEmailValid = _isValidEmail(email); // <- validate format
+        isInputEmpty = input.isEmpty;
+        isInputValid = _isValidEmail(input) || _isValidPhone(input);
       });
     });
   }
@@ -41,26 +40,56 @@ class SiginState extends State<Sigin> {
     return emailRegex.hasMatch(email);
   }
 
+  bool _isValidPhone(String phone) {
+    final phoneRegex = RegExp(r'^\+?[\d\s-]{10,}$');
+    return phoneRegex.hasMatch(phone);
+  }
+
   @override
   void dispose() {
-    _emailController.dispose();
+    _emailOrPhoneController.dispose();
     _passwordController.dispose();
-
     super.dispose();
   }
 
-  Future<String?> signIn(String email, String password) async {
+  Future<String?> signIn(String input, String password) async {
     try {
-      print("Attempting to sign in with email: $email"); // Debug log
+      print("Attempting to sign in with input: $input"); // Debug log
 
-      // First sign in with Firebase Auth
+      String? email;
+      String? uid;
+
+      // Check if input is an email or phone number
+      if (_isValidEmail(input)) {
+        // Input is an email
+        email = input;
+      } else if (_isValidPhone(input)) {
+        // Input is a phone number, query Firestore to find matching email
+        QuerySnapshot query = await FirebaseFirestore.instance
+            .collection('admins')
+            .where('phone', isEqualTo: input)
+            .limit(1)
+            .get();
+
+        if (query.docs.isNotEmpty) {
+          email = query.docs.first.get('email') as String;
+          uid = query.docs.first.get('uid') as String;
+          print("Found email for phone: $email"); // Debug log
+        } else {
+          return 'No account found for this phone number.';
+        }
+      } else {
+        return 'Invalid email or phone number format.';
+      }
+
+      // Sign in with Firebase Auth using the email
       UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
+          .signInWithEmailAndPassword(email: email!, password: password);
 
-      String uid = userCredential.user!.uid;
+      uid ??= userCredential.user!.uid;
       print("Sign in successful, UID: $uid"); // Debug log
 
-      // Check if the user exists in the 'admins' collection
+      // Verify admin role in Firestore
       DocumentSnapshot adminDoc = await FirebaseFirestore.instance
           .collection('admins')
           .doc(uid)
@@ -72,14 +101,12 @@ class SiginState extends State<Sigin> {
 
         if (adminData['role'] == 'admin') {
           print("Admin login verified.");
-          return null; // allow login
+          return null; // Allow login
         } else {
-          // Not an admin
           await FirebaseAuth.instance.signOut();
           return 'Access denied. You are not an admin.';
         }
       } else {
-        // No admin record found
         await FirebaseAuth.instance.signOut();
         return 'No admin record found.';
       }
@@ -91,13 +118,13 @@ class SiginState extends State<Sigin> {
   }
 
   void handleSignIn() async {
-    String email = _emailController.text.trim();
+    String input = _emailOrPhoneController.text.trim();
     String password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Please fill in both fields")));
+    if (input.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in both fields")),
+      );
       return;
     }
 
@@ -105,11 +132,11 @@ class SiginState extends State<Sigin> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => Center(child: CircularProgressIndicator()),
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
-      String? result = await signIn(email, password);
+      String? result = await signIn(input, password);
 
       // Remove the loading dialog
       Navigator.of(context, rootNavigator: true).pop();
@@ -117,14 +144,14 @@ class SiginState extends State<Sigin> {
       if (result == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Signed in successfully"),
-            backgroundColor: Color(0xFFFFCC3E),
+            content: const Text("Signed in successfully"),
+            backgroundColor: const Color(0xFFFFCC3E),
           ),
         );
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => Dashboard()), // Fix class name
+          MaterialPageRoute(builder: (_) => const Dashboard()),
         );
       } else {
         ScaffoldMessenger.of(
@@ -140,9 +167,25 @@ class SiginState extends State<Sigin> {
     }
   }
 
+  Future<String?> _getEmailFromPhone(String phone) async {
+    try {
+      QuerySnapshot query = await FirebaseFirestore.instance
+          .collection('admins')
+          .where('phone', isEqualTo: phone)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        return query.docs.first.get('email') as String;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -160,13 +203,12 @@ class SiginState extends State<Sigin> {
             ),
           ),
 
-          // icon button image
+          // Icon button image
           Positioned(
             left: -screenHeight * .05,
             top: -screenHeight * .09,
             child: TextButton(
               onPressed: () {
-                // Exit the app
                 SystemChannels.platform.invokeMethod('SystemNavigator.pop');
               },
               child: SizedBox(
@@ -194,12 +236,12 @@ class SiginState extends State<Sigin> {
             ),
           ),
 
-          //Welcome text
+          // Welcome text
           Positioned(
             top: screenHeight * .3,
             left: screenHeight * .04,
             right: screenHeight * .04,
-            child: Text(
+            child: const Text(
               'Welcome Back',
               style: TextStyle(
                 fontSize: 35,
@@ -215,50 +257,57 @@ class SiginState extends State<Sigin> {
             top: screenHeight * .35,
             left: screenHeight * .04,
             right: screenHeight * .04,
-            child: Text(
+            child: const Text(
               'SIGN IN',
               style: TextStyle(
                 fontSize: 25,
-                // fontWeight: FontWeight.bold,
                 color: Color.fromARGB(255, 63, 97, 209),
               ),
               textAlign: TextAlign.center,
             ),
           ),
 
-          //text fields of email
+          // Email or Phone text field
           Positioned(
             top: screenHeight * .44,
             left: screenHeight * .04,
             right: screenHeight * .04,
             child: TextField(
-              controller: _emailController,
+              controller: _emailOrPhoneController,
               decoration: InputDecoration(
                 suffixIcon: Icon(
-                  Icons.email_outlined,
-                  color: Color(0xFF030047),
+                  _isValidEmail(_emailOrPhoneController.text.trim())
+                      ? Icons.email_outlined
+                      : Icons.phone_outlined,
+                  color: const Color(0xFF030047),
                 ),
-                labelText: 'Email or Username',
-                labelStyle: TextStyle(
+                labelText: 'Email or Phone Number',
+                labelStyle: const TextStyle(
                   color: Color.fromARGB(255, 193, 204, 240),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.transparent, width: 2),
+                  borderSide: const BorderSide(
+                    color: Colors.transparent,
+                    width: 2,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Color(0xFF030047), width: 2),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF030047),
+                    width: 2,
+                  ),
                 ),
                 filled: true,
-                fillColor: Color(0xFFE1E5F2),
+                fillColor: const Color(0xFFE1E5F2),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: screenHeight * .02,
                   vertical: screenHeight * .015,
                 ),
               ),
-              style: TextStyle(fontSize: 18),
-              keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(fontSize: 18),
+              keyboardType: TextInputType.text,
             ),
           ),
 
@@ -268,14 +317,13 @@ class SiginState extends State<Sigin> {
             left: 0,
             right: 0,
             child: SizedBox(
-              height:
-                  MediaQuery.of(context).size.height *
-                  0.6, // Adjust based on screen size
+              height: MediaQuery.of(context).size.height * 0.6,
               width: MediaQuery.of(context).size.width,
               child: Image.asset('assets/images/bottom.png', fit: BoxFit.cover),
             ),
           ),
-          //text fields of password
+
+          // Password text field
           Positioned(
             top: screenHeight * .54,
             left: screenHeight * .04,
@@ -289,7 +337,7 @@ class SiginState extends State<Sigin> {
                     _isPasswordVisible
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    color: Color(0xFF030047),
+                    color: const Color(0xFF030047),
                   ),
                   onPressed: () {
                     setState(() {
@@ -298,41 +346,76 @@ class SiginState extends State<Sigin> {
                   },
                 ),
                 labelText: 'Password',
-                labelStyle: TextStyle(
+                labelStyle: const TextStyle(
                   color: Color.fromARGB(255, 193, 204, 240),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.transparent, width: 2),
+                  borderSide: const BorderSide(
+                    color: Colors.transparent,
+                    width: 2,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Color(0xFF030047), width: 2),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF030047),
+                    width: 2,
+                  ),
                 ),
                 filled: true,
-                fillColor: Color(0xFFE1E5F2),
+                fillColor: const Color(0xFFE1E5F2),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: screenHeight * .02,
                   vertical: screenHeight * .015,
                 ),
               ),
-              style: TextStyle(fontSize: 18),
+              style: const TextStyle(fontSize: 18),
             ),
           ),
 
-          //forgot password text
+          // Forgot password text
           Positioned(
             bottom: screenHeight * .35,
             right: screenHeight * .04,
             child: TextButton(
-              onPressed: (!isEmailEmpty && isEmailValid)
-                  ? () {
+              onPressed: (!isInputEmpty && isInputValid)
+                  ? () async {
+                      String? email;
+                      String? phone;
+                      final input = _emailOrPhoneController.text.trim();
+
+                      if (_isValidEmail(input)) {
+                        email = input;
+                      } else if (_isValidPhone(input)) {
+                        phone = input;
+                        email = await _getEmailFromPhone(input);
+                        if (email == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "No account found for this phone number.",
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Invalid email or phone number format.",
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => OTPVerification(
-                            email: _emailController.text.trim(),
-                          ),
+                          builder: (context) =>
+                              OTPVerification(email: email ?? '', phone: phone),
                         ),
                       );
                     }
@@ -340,7 +423,7 @@ class SiginState extends State<Sigin> {
               child: Text(
                 "Forgot Password?",
                 style: TextStyle(
-                  color: (!isEmailEmpty && isEmailValid)
+                  color: (!isInputEmpty && isInputValid)
                       ? Colors.blue
                       : Colors.grey,
                   fontSize: 16,
@@ -349,7 +432,7 @@ class SiginState extends State<Sigin> {
             ),
           ),
 
-          //  Button above the image
+          // Sign In button
           Positioned(
             bottom: screenHeight * .15,
             left: 0,
@@ -363,9 +446,9 @@ class SiginState extends State<Sigin> {
                     handleSignIn();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFFFCC3E),
+                    backgroundColor: const Color(0xFFFFCC3E),
                   ),
-                  child: Text(
+                  child: const Text(
                     "SIGN IN",
                     style: TextStyle(color: Color(0xFF030047), fontSize: 16),
                   ),
@@ -381,15 +464,13 @@ class SiginState extends State<Sigin> {
             right: 0,
             child: Center(
               child: SizedBox(
-                width:
-                    MediaQuery.of(context).size.width *
-                    0.9, // 90% of screen width
+                width: MediaQuery.of(context).size.width * 0.9,
                 height: 60,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "don't have an account? ",
+                      "Don't have an account? ",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: screenHeight * .02,
@@ -399,13 +480,15 @@ class SiginState extends State<Sigin> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => Signup()),
+                          MaterialPageRoute(
+                            builder: (context) => const Signup(),
+                          ),
                         );
                       },
                       child: Text(
-                        "create one now",
+                        "Create one now",
                         style: TextStyle(
-                          color: Color(0xFFFFCC3E),
+                          color: const Color(0xFFFFCC3E), // Fixed color value
                           fontSize: screenHeight * .022,
                           fontWeight: FontWeight.bold,
                         ),

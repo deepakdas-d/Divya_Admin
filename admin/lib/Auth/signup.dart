@@ -12,6 +12,7 @@ class Signup extends StatefulWidget {
 
 class _SignupState extends State<Signup> {
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -21,10 +22,14 @@ class _SignupState extends State<Signup> {
   //signUp function to handle user registration
   Future<void> signUp() async {
     String email = _emailController.text.trim();
+    String phone = _phoneController.text.trim();
     String password = _passwordController.text;
     String confirmPassword = _confirmPasswordController.text;
 
-    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+    if (email.isEmpty ||
+        phone.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
@@ -48,6 +53,7 @@ class _SignupState extends State<Signup> {
       // Store admin user data in Firestore
       await FirebaseFirestore.instance.collection('admins').doc(user!.uid).set({
         'email': email,
+        'phone': phone,
         'uid': user.uid,
         'role': 'admin', // Mark as admin
         'createdAt': Timestamp.now(),
@@ -86,6 +92,7 @@ class _SignupState extends State<Signup> {
   @override
   void dispose() {
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -93,7 +100,6 @@ class _SignupState extends State<Signup> {
 
   @override
   Widget build(BuildContext context) {
-    // final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -217,9 +223,56 @@ class _SignupState extends State<Signup> {
             ),
           ),
 
-          // Password text field
+          // Phone number text field
           Positioned(
             top: screenHeight * .47,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
+            child: TextField(
+              controller: _phoneController,
+              decoration: InputDecoration(
+                suffixIcon: Icon(
+                  Icons.phone_outlined,
+                  color: Color(0xFF030047),
+                ),
+                labelText: 'Phone Number',
+                labelStyle: TextStyle(
+                  color: Color.fromARGB(255, 193, 204, 240),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide(color: Colors.transparent, width: 2),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide(color: Color(0xFF030047), width: 2),
+                ),
+                filled: true,
+                fillColor: Color(0xFFE1E5F2),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 15,
+                ),
+              ),
+              style: TextStyle(fontSize: 18),
+              keyboardType: TextInputType.phone,
+            ),
+          ),
+
+          //respositioned bottom image
+          Positioned(
+            bottom: -screenHeight * .17,
+            left: screenHeight * -.001,
+            right: 0,
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+              width: MediaQuery.of(context).size.width,
+              child: Image.asset('assets/images/bottom.png', fit: BoxFit.cover),
+            ),
+          ),
+          // Password text field
+          Positioned(
+            top: screenHeight * .55,
             left: screenHeight * .04,
             right: screenHeight * .04,
             child: TextField(
@@ -262,21 +315,9 @@ class _SignupState extends State<Signup> {
             ),
           ),
 
-          // Bottom image (moved before confirm password field)
+          // Confirm Password text field
           Positioned(
-            bottom: -screenHeight * .1,
-            left: 0,
-            right: 0,
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.6,
-              width: MediaQuery.of(context).size.width,
-              child: Image.asset('assets/images/bottom.png', fit: BoxFit.cover),
-            ),
-          ),
-
-          // Confirm Password text field (moved after bottom image)
-          Positioned(
-            top: screenHeight * .55,
+            top: screenHeight * .63,
             left: screenHeight * .04,
             right: screenHeight * .04,
             child: TextField(
@@ -321,7 +362,7 @@ class _SignupState extends State<Signup> {
 
           // Sign up button
           Positioned(
-            bottom: screenHeight * .15,
+            bottom: screenHeight * .13,
             left: 0,
             right: 0,
             child: Center(

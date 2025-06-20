@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 class OTPVerification extends StatefulWidget {
   final String email;
 
-  const OTPVerification({super.key, required this.email});
+  const OTPVerification({super.key, required this.email, String? phone});
 
   @override
   State<OTPVerification> createState() => _OTPVerificationState();
