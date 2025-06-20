@@ -142,13 +142,15 @@ class SiginState extends State<Sigin> {
 
   @override
   Widget build(BuildContext context) {
+    // final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           // Top image
           Positioned(
-            top: 80,
+            top: screenHeight * .08,
             left: 0,
             right: 0,
             child: SizedBox(
@@ -160,8 +162,8 @@ class SiginState extends State<Sigin> {
 
           // icon button image
           Positioned(
-            left: -54,
-            top: -90,
+            left: -screenHeight * .05,
+            top: -screenHeight * .09,
             child: TextButton(
               onPressed: () {
                 // Exit the app
@@ -180,8 +182,8 @@ class SiginState extends State<Sigin> {
 
           // Round image
           Positioned(
-            right: -144,
-            top: -110,
+            right: -screenHeight * .14,
+            top: -screenHeight * .13,
             child: SizedBox(
               height: MediaQuery.of(context).size.height * 0.3,
               width: MediaQuery.of(context).size.height * 0.3,
@@ -194,9 +196,9 @@ class SiginState extends State<Sigin> {
 
           //Welcome text
           Positioned(
-            top: 300,
-            left: 40,
-            right: 40,
+            top: screenHeight * .3,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
             child: Text(
               'Welcome Back',
               style: TextStyle(
@@ -210,9 +212,9 @@ class SiginState extends State<Sigin> {
 
           // Sign in text
           Positioned(
-            top: 350,
-            left: 40,
-            right: 40,
+            top: screenHeight * .35,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
             child: Text(
               'SIGN IN',
               style: TextStyle(
@@ -226,9 +228,9 @@ class SiginState extends State<Sigin> {
 
           //text fields of email
           Positioned(
-            top: 440,
-            left: 40,
-            right: 40,
+            top: screenHeight * .44,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
             child: TextField(
               controller: _emailController,
               decoration: InputDecoration(
@@ -251,8 +253,8 @@ class SiginState extends State<Sigin> {
                 filled: true,
                 fillColor: Color(0xFFE1E5F2),
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 15,
+                  horizontal: screenHeight * .02,
+                  vertical: screenHeight * .015,
                 ),
               ),
               style: TextStyle(fontSize: 18),
@@ -262,7 +264,7 @@ class SiginState extends State<Sigin> {
 
           // Bottom image
           Positioned(
-            bottom: -100,
+            bottom: -screenHeight * .1,
             left: 0,
             right: 0,
             child: SizedBox(
@@ -275,9 +277,9 @@ class SiginState extends State<Sigin> {
           ),
           //text fields of password
           Positioned(
-            top: 520,
-            left: 40,
-            right: 40,
+            top: screenHeight * .54,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
             child: TextField(
               controller: _passwordController,
               obscureText: !_isPasswordVisible,
@@ -310,8 +312,8 @@ class SiginState extends State<Sigin> {
                 filled: true,
                 fillColor: Color(0xFFE1E5F2),
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
+                  horizontal: screenHeight * .02,
+                  vertical: screenHeight * .015,
                 ),
               ),
               style: TextStyle(fontSize: 18),
@@ -320,8 +322,8 @@ class SiginState extends State<Sigin> {
 
           //forgot password text
           Positioned(
-            bottom: 330,
-            right: 40,
+            bottom: screenHeight * .35,
+            right: screenHeight * .04,
             child: TextButton(
               onPressed: (!isEmailEmpty && isEmailValid)
                   ? () {
@@ -349,7 +351,7 @@ class SiginState extends State<Sigin> {
 
           //  Button above the image
           Positioned(
-            bottom: 150,
+            bottom: screenHeight * .15,
             left: 0,
             right: 0,
             child: Center(
@@ -374,7 +376,7 @@ class SiginState extends State<Sigin> {
 
           // Sign Up text
           Positioned(
-            bottom: 60,
+            bottom: screenHeight * .06,
             left: 0,
             right: 0,
             child: Center(
@@ -388,7 +390,10 @@ class SiginState extends State<Sigin> {
                   children: [
                     Text(
                       "don't have an account? ",
-                      style: TextStyle(color: Colors.white, fontSize: 20),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: screenHeight * .02,
+                      ),
                     ),
                     TextButton(
                       onPressed: () {
@@ -401,7 +406,7 @@ class SiginState extends State<Sigin> {
                         "create one now",
                         style: TextStyle(
                           color: Color(0xFFFFCC3E),
-                          fontSize: 20,
+                          fontSize: screenHeight * .022,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
