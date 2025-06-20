@@ -93,14 +93,16 @@ class _SignupState extends State<Signup> {
 
   @override
   Widget build(BuildContext context) {
+    // final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           // Round image
           Positioned(
-            right: -144,
-            top: -110,
+            right: screenHeight * -0.15,
+            top: -screenHeight * 0.1,
             child: SizedBox(
               height: MediaQuery.of(context).size.height * 0.3,
               width: MediaQuery.of(context).size.height * 0.3,
@@ -113,7 +115,7 @@ class _SignupState extends State<Signup> {
 
           // Top image
           Positioned(
-            top: 20,
+            top: screenHeight * 0.02,
             left: 0,
             right: 0,
             child: SizedBox(
@@ -128,8 +130,8 @@ class _SignupState extends State<Signup> {
 
           // icon button image
           Positioned(
-            left: -54,
-            top: -90,
+            left: -screenHeight * 0.05,
+            top: -screenHeight * 0.09,
             child: TextButton(
               onPressed: () {
                 Navigator.push(
@@ -150,9 +152,9 @@ class _SignupState extends State<Signup> {
 
           //Welcome text
           Positioned(
-            top: 260,
-            left: 40,
-            right: 40,
+            top: screenHeight * .27,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
             child: Text(
               "LET'S GET STARTED",
               style: TextStyle(
@@ -166,9 +168,9 @@ class _SignupState extends State<Signup> {
 
           // Sign up text
           Positioned(
-            top: 300,
-            left: 40,
-            right: 40,
+            top: screenHeight * .31,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
             child: Text(
               'SIGN UP',
               style: TextStyle(
@@ -181,9 +183,9 @@ class _SignupState extends State<Signup> {
 
           // Email text field
           Positioned(
-            top: 380,
-            left: 40,
-            right: 40,
+            top: screenHeight * .39,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
             child: TextField(
               controller: _emailController,
               decoration: InputDecoration(
@@ -217,9 +219,9 @@ class _SignupState extends State<Signup> {
 
           // Password text field
           Positioned(
-            top: 450,
-            left: 40,
-            right: 40,
+            top: screenHeight * .47,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
             child: TextField(
               controller: _passwordController,
               decoration: InputDecoration(
@@ -262,7 +264,7 @@ class _SignupState extends State<Signup> {
 
           // Bottom image (moved before confirm password field)
           Positioned(
-            bottom: -100,
+            bottom: -screenHeight * .1,
             left: 0,
             right: 0,
             child: SizedBox(
@@ -274,9 +276,9 @@ class _SignupState extends State<Signup> {
 
           // Confirm Password text field (moved after bottom image)
           Positioned(
-            top: 520,
-            left: 40,
-            right: 40,
+            top: screenHeight * .55,
+            left: screenHeight * .04,
+            right: screenHeight * .04,
             child: TextField(
               controller: _confirmPasswordController,
               decoration: InputDecoration(
@@ -319,7 +321,7 @@ class _SignupState extends State<Signup> {
 
           // Sign up button
           Positioned(
-            bottom: 150,
+            bottom: screenHeight * .15,
             left: 0,
             right: 0,
             child: Center(
@@ -351,7 +353,7 @@ class _SignupState extends State<Signup> {
 
           // Login link
           Positioned(
-            bottom: 60,
+            bottom: screenHeight * .06,
             left: 0,
             right: 0,
             child: Center(
