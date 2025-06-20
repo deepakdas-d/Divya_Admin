@@ -95,8 +95,8 @@ class _ResetPasswordState extends State<ResetPassword> {
       body: Stack(
         children: [
           Positioned(
-            top: 80,
-            left: 30,
+            top: screenHeight * .08,
+            left: screenHeight * .03,
             child: Container(
               width: MediaQuery.of(context).size.width * 0.15,
               height: MediaQuery.of(context).size.width * 0.15,
