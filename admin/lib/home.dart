@@ -1,3 +1,4 @@
+import 'package:admin/Auth/sigin.dart';
 import 'package:admin/Screens/Complaint/ComplaintPage.dart';
 import 'package:admin/Screens/LeadReport/LeadReportPage.dart';
 import 'package:admin/Screens/Maker/MakerManagementPage.dart';
@@ -5,10 +6,22 @@ import 'package:admin/Screens/Orders/Order_report.dart';
 import 'package:admin/Screens/PostSaleFollowUp/postsalefollowup.dart';
 import 'package:admin/Screens/Sales/SalesManagementPage.dart';
 import 'package:admin/Screens/product/product_adding.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Dashboard extends StatelessWidget {
+  const Dashboard({super.key});
+
+  Future<void> logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => Sigin()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -16,75 +29,226 @@ class Dashboard extends StatelessWidget {
     final isLargeScreen = screenSize.width > 900;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1E293B),
-      body: SafeArea(
-        child: Column(
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
-            // Enhanced Header
-            _buildHeader(context, screenSize),
-
-            // Content Area
-            Expanded(
-              child: Container(
-                margin: EdgeInsets.only(top: screenSize.height * 0.02),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(screenSize.width * 0.04),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Welcome Section
-                      _buildWelcomeSection(context, screenSize),
-
-                      SizedBox(height: screenSize.height * 0.025),
-
-                      // Stats Cards Row
-                      _buildStatsCards(context, screenSize),
-
-                      SizedBox(height: screenSize.height * 0.03),
-
-                      // Sales Growth Chart
-                      _buildSalesChart(context, screenSize),
-
-                      SizedBox(height: screenSize.height * 0.03),
-
-                      // Quick Actions Title
-                      Text(
-                        'Quick Actions',
-                        style: TextStyle(
-                          fontSize: screenSize.width * 0.05,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1E293B),
-                        ),
-                      ),
-
-                      SizedBox(height: screenSize.height * 0.02),
-
-                      // Dashboard Options Grid
-                      _buildDashboardGrid(
-                        context,
-                        screenSize,
-                        isTablet,
-                        isLargeScreen,
-                      ),
-                    ],
-                  ),
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1E293B), Color(0xFF334155)],
                 ),
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF59E0B), Color(0xFFEAB308)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFF59E0B).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.admin_panel_settings,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Admin Dashboard',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: screenSize.width * 0.05,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Manage your business',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: screenSize.width * 0.035,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildDrawerItem(
+              context: context,
+              icon: Icons.home_outlined,
+              title: 'Home',
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+              },
+            ),
+            _buildDrawerItem(
+              context: context,
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              onTap: () {
+                Navigator.pop(context);
+                // Add navigation to settings page if needed
+              },
+            ),
+            _buildDrawerItem(
+              context: context,
+              icon: Icons.feedback_outlined,
+              title: 'Send Feedback',
+              onTap: () async {
+                Navigator.pop(context);
+                const url = 'mailto:feedback@example.com?subject=Feedback';
+                if (await canLaunchUrl(Uri.parse(url))) {
+                  await launchUrl(Uri.parse(url));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open email client'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+            ),
+            _buildDrawerItem(
+              context: context,
+              icon: Icons.privacy_tip_outlined,
+              title: 'Privacy Policy',
+              onTap: () async {
+                Navigator.pop(context);
+                const url = 'https://example.com/privacy-policy';
+                if (await canLaunchUrl(Uri.parse(url))) {
+                  await launchUrl(Uri.parse(url));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open privacy policy'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+            ),
+            const Divider(
+              color: Color(0xFFE2E8F0),
+              thickness: 1,
+              indent: 16,
+              endIndent: 16,
+            ),
+            _buildDrawerItem(
+              context: context,
+              icon: Icons.logout_outlined,
+              title: 'Logout',
+              iconColor: const Color(0xFFEF4444),
+              onTap: () async {
+                Navigator.pop(context);
+                await logout(context);
+              },
             ),
           ],
         ),
       ),
+      body: Builder(
+        builder: (context) {
+          final screenSize = MediaQuery.of(context).size;
+
+          return SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context, screenSize),
+                Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(top: screenSize.height * 0.02),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(screenSize.width * 0.04),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildWelcomeSection(context, screenSize),
+                          SizedBox(height: screenSize.height * 0.025),
+                          _buildStatsCards(context, screenSize),
+                          SizedBox(height: screenSize.height * 0.03),
+                          _buildSalesChart(context, screenSize),
+                          SizedBox(height: screenSize.height * 0.03),
+                          Text(
+                            'Quick Actions',
+                            style: TextStyle(
+                              fontSize: screenSize.width * 0.05,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF1E293B),
+                            ),
+                          ),
+                          SizedBox(height: screenSize.height * 0.02),
+                          _buildDashboardGrid(
+                            context,
+                            screenSize,
+                            isTablet,
+                            isLargeScreen,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
-  // Example page classes for navigation
+  Widget _buildDrawerItem({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color? iconColor,
+  }) {
+    final screenSize = MediaQuery.of(context).size;
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: iconColor ?? const Color(0xFF1E293B),
+        size: screenSize.width * 0.06,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: screenSize.width * 0.04,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF1E293B),
+        ),
+      ),
+      onTap: onTap,
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: screenSize.width * 0.06,
+        vertical: screenSize.height * 0.005,
+      ),
+      tileColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      selectedTileColor: const Color(0xFFF59E0B).withOpacity(0.1),
+    );
+  }
 
   Widget _buildHeader(BuildContext context, Size screenSize) {
     return Container(
@@ -101,26 +265,31 @@ class Dashboard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: screenSize.width * 0.11,
-            height: screenSize.width * 0.11,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF59E0B), Color(0xFFEAB308)],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFF59E0B).withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+          GestureDetector(
+            onTap: () {
+              Scaffold.of(context).openDrawer();
+            },
+            child: Container(
+              width: screenSize.width * 0.11,
+              height: screenSize.width * 0.11,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF59E0B), Color(0xFFEAB308)],
                 ),
-              ],
-            ),
-            child: Icon(
-              Icons.arrow_back_ios_new,
-              color: Colors.white,
-              size: screenSize.width * 0.045,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFF59E0B).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.menu,
+                color: Colors.white,
+                size: screenSize.width * 0.045,
+              ),
             ),
           ),
           Expanded(
