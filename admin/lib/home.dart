@@ -17,7 +17,7 @@ class Dashboard extends StatelessWidget {
   Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => Sigin()),
+      MaterialPageRoute(builder: (context) => Signin()),
       (route) => false,
     );
   }
@@ -152,9 +152,8 @@ class Dashboard extends StatelessWidget {
               icon: Icons.logout_outlined,
               title: 'Logout',
               iconColor: const Color(0xFFEF4444),
-              onTap: () async {
-                Navigator.pop(context);
-                await logout(context);
+              onTap: () {
+                logout(context);
               },
             ),
           ],
