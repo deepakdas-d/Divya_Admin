@@ -4,9 +4,8 @@ import 'package:admin/Screens/LeadReport/LeadReportPage.dart';
 import 'package:admin/Screens/Maker/MakerManagementPage.dart';
 import 'package:admin/Screens/Orders/Order_report.dart';
 import 'package:admin/Screens/PostSaleFollowUp/postsalefollowup.dart';
-import 'package:admin/Screens/Sales/SalesManagementPage.dart';
+import 'package:admin/Screens/Sales/listsalesmen.dart';
 import 'package:admin/Screens/product/listproducts.dart';
-import 'package:admin/Screens/product/product_adding.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -39,7 +38,10 @@ class Dashboard extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF1E293B), Color(0xFF334155)],
+                  colors: [
+                    Color.fromARGB(255, 40, 100, 196),
+                    Color.fromARGB(255, 45, 110, 202),
+                  ],
                 ),
               ),
               child: Column(
@@ -260,7 +262,7 @@ class Dashboard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1E293B), Color(0xFF334155)],
+          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
         ),
       ),
       child: Row(
