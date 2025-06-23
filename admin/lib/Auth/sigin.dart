@@ -99,6 +99,9 @@ class Signin extends StatelessWidget {
                 ),
               ),
 
+
+         
+       
               // Email or Phone field
               Positioned(
                 top: MediaQuery.of(context).size.height * 0.45,
@@ -134,6 +137,7 @@ class Signin extends StatelessWidget {
                     ),
                     filled: true,
                     fillColor: Color(0xFFE1E5F2),
+
                   ),
                 ),
               ),
