@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
       ),
-      home: Dashboard(), // Use AuthWrapper to manage authentication state
+      home: AuthWrapper(), // Use AuthWrapper to manage authentication state
     );
   }
 }

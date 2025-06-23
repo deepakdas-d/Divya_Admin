@@ -4,6 +4,7 @@ import 'package:admin/Screens/Maker/MakerManagementPage.dart';
 import 'package:admin/Screens/Orders/Order_report.dart';
 import 'package:admin/Screens/PostSaleFollowUp/postsalefollowup.dart';
 import 'package:admin/Screens/Sales/SalesManagementPage.dart';
+import 'package:admin/Screens/product/listproducts.dart';
 import 'package:admin/Screens/product/product_adding.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -548,7 +549,7 @@ class Dashboard extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => ProductDetailsScreen()),
+            MaterialPageRoute(builder: (context) => ProductListPage()),
           );
         },
       ),

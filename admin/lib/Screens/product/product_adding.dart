@@ -1,148 +1,127 @@
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 
-class ProductDetailsScreen extends StatefulWidget {
-  const ProductDetailsScreen({super.key});
-
+class ProductAddPage extends StatefulWidget {
   @override
-  _ProductDetailsScreenState createState() => _ProductDetailsScreenState();
+  _ProductAddPageState createState() => _ProductAddPageState();
 }
 
-class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
+class _ProductAddPageState extends State<ProductAddPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _productNameController = TextEditingController();
-  final TextEditingController _productIdController = TextEditingController();
-  final TextEditingController _materialsController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _sizeController = TextEditingController();
-  List<File> _selectedImages = [];
-  final ImagePicker _picker = ImagePicker();
+  final _firestore = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
+
+  // State variables
+  File? _imageFile;
   bool _isUploading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    print('ProductDetailsScreen initialized');
-    // Test Firestore
-    FirebaseFirestore.instance
-        .collection('test')
-        .doc('test')
-        .set({'data': 'test'})
-        .then((_) {
-          print('Firestore write successful');
-        })
-        .catchError((e) {
-          print('Firestore error: $e');
-        });
-  }
+  // Form data
+  final Map<String, dynamic> _product = {
+    'name': '',
+    'id': '',
+    'materials': '',
+    'description': '',
+    'price': null,
+    'imageUrl': '',
+    'timestamp': FieldValue.serverTimestamp(),
+  };
 
-  @override
-  void dispose() {
-    _productNameController.dispose();
-    _productIdController.dispose();
-    _materialsController.dispose();
-    _descriptionController.dispose();
-    _priceController.dispose();
-    _sizeController.dispose();
-    super.dispose();
-  }
+  // Image Picker
+  final ImagePicker _picker = ImagePicker();
 
-  Future<void> _pickImages() async {
+  Future<void> _pickImage(ImageSource source) async {
     try {
-      // Check and request photo permission
-      PermissionStatus status = await Permission.photos.status;
-      print('Photo permission status: $status');
-      if (!status.isGranted) {
-        status = await Permission.photos.request();
-        print('Photo permission after request: $status');
-        if (!status.isGranted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Photo permission denied')));
-          return;
-        }
-      }
-
-      final List<XFile> images = await _picker.pickMultiImage();
-      print('Picked images: $images');
-      if (images.isNotEmpty) {
+      final pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+      if (pickedFile != null) {
         setState(() {
-          _selectedImages = images.map((image) => File(image.path)).toList();
+          _imageFile = File(pickedFile.path);
         });
       }
-    } catch (e, stackTrace) {
-      print('Image picker error: $e');
-      print('Stack trace: $stackTrace');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error picking images: $e')));
+    } catch (e) {
+      // Handle any errors
+      print("Image picking failed: $e");
     }
   }
 
-  Future<List<String>> _uploadImages() async {
-    List<String> imageUrls = [];
-    for (int i = 0; i < _selectedImages.length; i++) {
-      try {
-        String fileName =
-            'products/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
-        Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
-        UploadTask uploadTask = storageRef.putFile(_selectedImages[i]);
-        TaskSnapshot snapshot = await uploadTask;
-        String downloadUrl = await snapshot.ref.getDownloadURL();
-        imageUrls.add(downloadUrl);
-      } catch (e) {
-        print('Error uploading image $i: $e');
-      }
-    }
-    return imageUrls;
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext bc) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Photo Library'),
+                onTap: () {
+                  _pickImage(ImageSource.gallery);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Camera'),
+                onTap: () {
+                  _pickImage(ImageSource.camera);
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
-      return;
+      return; // If form is not valid, do not proceed.
     }
-    if (_selectedImages.isEmpty) {
+    if (_imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please select at least one image')),
+        const SnackBar(content: Text('Please select a product image.')),
       );
       return;
     }
+
     setState(() {
       _isUploading = true;
     });
+
+    _formKey.currentState!.save();
+
     try {
-      List<String> imageUrls = await _uploadImages();
-      Map<String, dynamic> productData = {
-        'productName': _productNameController.text.trim(),
-        'productId': _productIdController.text.trim(),
-        'materials': _materialsController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'price': double.tryParse(_priceController.text.trim()) ?? 0.0,
-        'size': _sizeController.text.trim(),
-        'images': imageUrls,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-      await FirebaseFirestore.instance.collection('products').add(productData);
+      // 1. Upload image to Firebase Storage
+      String fileName = 'products/${DateTime.now().millisecondsSinceEpoch}.png';
+      UploadTask uploadTask = _storage
+          .ref()
+          .child(fileName)
+          .putFile(_imageFile!);
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      _product['imageUrl'] = downloadUrl;
+
+      // 2. Add product data to Firestore
+      await _firestore.collection('products').add(_product);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Product added successfully!'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('Product added successfully!')),
       );
-      _clearForm();
-    } catch (e, stackTrace) {
-      print('Submit error: $e');
-      print('Stack trace: $stackTrace');
+      _formKey.currentState!.reset();
+      setState(() {
+        _imageFile = null;
+      });
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding product: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Failed to add product: ${e.toString()}')),
       );
     } finally {
       setState(() {
@@ -151,299 +130,202 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
   }
 
-  void _clearForm() {
-    _productNameController.clear();
-    _productIdController.clear();
-    _materialsController.clear();
-    _descriptionController.clear();
-    _priceController.clear();
-    _sizeController.clear();
-    setState(() {
-      _selectedImages.clear();
-    });
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required IconData icon,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        controller: controller,
-        maxLines: maxLines,
-        keyboardType: keyboardType,
-        validator: validator,
-        decoration: InputDecoration(
-          suffixIcon: Icon(icon, color: Color(0xFF030047)),
-          labelText: labelText,
-          labelStyle: TextStyle(color: Color.fromARGB(255, 193, 204, 240)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide(color: Colors.transparent, width: 2),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide(color: Color(0xFF030047), width: 2),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide(color: Colors.red, width: 2),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide(color: Colors.red, width: 2),
-          ),
-          filled: true,
-          fillColor: Color(0xFFE1E5F2),
-          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-        ),
-        style: TextStyle(fontSize: 18),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    print('Building ProductDetailsScreen');
-    try {
-      return Scaffold(
-        backgroundColor: Color(0xFF030047),
-        appBar: AppBar(
-          backgroundColor: Color(0xFF030047),
-          elevation: 0,
-          leading: IconButton(
-            icon: CircleAvatar(
-              backgroundColor: Colors.amber,
-              child: Icon(Icons.arrow_back, color: Color(0xFF030047)),
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'Product Details',
-            style: TextStyle(color: Colors.white, fontSize: 20),
-          ),
-          centerTitle: true,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Add New Product',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        body: Container(
-          margin: EdgeInsets.only(top: 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
-            ),
-          ),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(20),
+        backgroundColor: Colors.indigo[800],
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: _pickImages,
-                        child: Container(
-                          width: 100,
-                          height: 100,
-                          margin: EdgeInsets.only(right: 20),
-                          decoration: BoxDecoration(
-                            color: Color(0xFFE1E5F2),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: _selectedImages.isNotEmpty
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(15),
-                                  child: Image.file(
-                                    _selectedImages[0],
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      print('Image error: $error');
-                                      return Text('Image load failed');
-                                    },
-                                  ),
-                                )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.image,
-                                      color: Colors.grey,
-                                      size: 30,
-                                    ),
-                                    Text(
-                                      'image',
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: _pickImages,
-                        child: Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: Color(0xFFE1E5F2),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: _selectedImages.length > 1
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(15),
-                                  child: Image.file(
-                                    _selectedImages[1],
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      print('Image error: $error');
-                                      return Text('Image load failed');
-                                    },
-                                  ),
-                                )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.image,
-                                      color: Colors.grey,
-                                      size: 30,
-                                    ),
-                                    Text(
-                                      'image',
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20),
+                  _buildImagePicker(),
+                  const SizedBox(height: 24),
                   _buildTextField(
-                    controller: _productNameController,
-                    labelText: 'Product Name',
                     icon: Icons.shopping_bag_outlined,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Product name is required'
-                        : null,
+                    label: 'Product Name',
+                    validator: (value) =>
+                        value!.isEmpty ? 'Please enter a name' : null,
+                    onSaved: (value) => _product['name'] = value!,
                   ),
+                  const SizedBox(height: 16),
                   _buildTextField(
-                    controller: _productIdController,
-                    labelText: 'Product ID',
-                    icon: Icons.qr_code,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Product ID is required'
-                        : null,
+                    icon: Icons.qr_code_scanner_outlined,
+                    label: 'Product ID',
+                    validator: (value) =>
+                        value!.isEmpty ? 'Please enter an ID' : null,
+                    onSaved: (value) => _product['id'] = value!,
                   ),
+                  const SizedBox(height: 16),
                   _buildTextField(
-                    controller: _materialsController,
-                    labelText: 'Materials',
-                    icon: Icons.construction_outlined,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Materials are required'
-                        : null,
+                    icon: Icons.blender_outlined,
+                    label: 'Materials Used',
+                    validator: (value) =>
+                        value!.isEmpty ? 'Please enter materials' : null,
+                    onSaved: (value) => _product['materials'] = value!,
                   ),
+                  const SizedBox(height: 16),
                   _buildTextField(
-                    controller: _descriptionController,
-                    labelText: 'Description',
                     icon: Icons.description_outlined,
-                    maxLines: 3,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Description is required'
-                        : null,
+                    label: 'Description',
+                    maxLines: 4,
+                    validator: (value) =>
+                        value!.isEmpty ? 'Please enter a description' : null,
+                    onSaved: (value) => _product['description'] = value!,
                   ),
+                  const SizedBox(height: 16),
                   _buildTextField(
-                    controller: _priceController,
-                    labelText: 'Price',
-                    icon: Icons.attach_money,
-                    keyboardType: TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
+                    icon: Icons.attach_money_outlined,
+                    label: 'Price',
+                    keyboardType: TextInputType.number,
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Price is required';
-                      }
-                      if (double.tryParse(value.trim()) == null) {
-                        return 'Please enter a valid price';
-                      }
+                      if (value == null || value.isEmpty)
+                        return 'Please enter a price';
+
+                      final parsedValue = double.tryParse(value);
+                      if (parsedValue == null) return 'Enter a valid number';
+
+                      // Check if the number before the decimal point has more than 6 digits
+                      final parts = value.split('.');
+                      if (parts[0].length > 6)
+                        return 'Price must be less than 6 digits';
+
                       return null;
                     },
+                    onSaved: (value) =>
+                        _product['price'] = double.parse(value!),
                   ),
-                  _buildTextField(
-                    controller: _sizeController,
-                    labelText: 'Size',
-                    icon: Icons.straighten,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Size is required'
-                        : null,
-                  ),
-                  SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isUploading ? null : _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF030047),
-                        padding: EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
+
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: _isUploading ? null : _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo[700],
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: _isUploading
-                          ? Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Text(
-                                  'Uploading...',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Text(
-                              'Submit',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                      elevation: 5,
+                    ),
+                    child: const Text(
+                      'SUBMIT PRODUCT',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
+          if (_isUploading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Uploading...',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // A helper method to build styled TextFormFields
+  Widget _buildTextField({
+    required IconData icon,
+    required String label,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    required FormFieldValidator<String> validator,
+    required FormFieldSetter<String> onSaved,
+  }) {
+    return TextFormField(
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.indigo[700]),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade400),
         ),
-      );
-    } catch (e, stackTrace) {
-      print('Build error: $e');
-      print('Stack trace: $stackTrace');
-      return Scaffold(body: Center(child: Text('Error rendering screen: $e')));
-    }
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.indigo.shade800, width: 2),
+        ),
+      ),
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
+      onSaved: onSaved,
+      textInputAction: TextInputAction.next,
+    );
+  }
+
+  // A helper method for the image picker UI
+  Widget _buildImagePicker() {
+    return GestureDetector(
+      onTap: _showImagePickerOptions,
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade400, width: 1),
+        ),
+        child: _imageFile != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  _imageFile!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                ),
+              )
+            : Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.add_a_photo_outlined,
+                      color: Colors.grey[600],
+                      size: 50,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tap to add product image',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ],
+                ),
+              ),
+      ),
+    );
   }
 }

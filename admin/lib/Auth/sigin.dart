@@ -265,13 +265,13 @@ class SiginState extends State<Sigin> {
           // Bottom image
           Positioned(
             bottom: -screenHeight * .1,
-            left: 0,
+            left: 1,
             right: 0,
             child: SizedBox(
               height:
                   MediaQuery.of(context).size.height *
                   0.6, // Adjust based on screen size
-              width: MediaQuery.of(context).size.width,
+              width: MediaQuery.of(context).size.width * 0.6,
               child: Image.asset('assets/images/bottom.png', fit: BoxFit.cover),
             ),
           ),
