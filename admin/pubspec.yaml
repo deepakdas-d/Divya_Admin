@@ -32,8 +32,15 @@ dependencies:
   provider: ^6.1.5
   url_launcher: ^6.3.1
   get: ^4.7.2
+<<<<<<< HEAD
   intl: ^0.20.2
 
+=======
+  geolocator: ^14.0.1
+  geocoding: ^4.0.0
+  flutter_webrtc: ^0.14.1
+ 
+>>>>>>> 917d6d063b9b43c96ed8d1268ce2be7b2d8bd12e
 dev_dependencies:
   flutter_test:
     sdk: flutter
