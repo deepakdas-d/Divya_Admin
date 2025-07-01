@@ -210,6 +210,7 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
                   final email = (data['email'] ?? '').toString().toLowerCase();
                   final phone = (data['phone'] ?? '').toString().toLowerCase();
                   final place = (data['place'] ?? '').toString().toLowerCase();
+                  final Location = (data[''] ?? '').toString().toLowerCase();
 
                   return name.contains(_searchQuery) ||
                       email.contains(_searchQuery) ||

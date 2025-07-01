@@ -884,7 +884,7 @@
 //     );
 //   }
 // }
-import 'package:admin/Screens/Users/usercontroller.dart';
+import 'package:admin/Controller/usercontroller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
