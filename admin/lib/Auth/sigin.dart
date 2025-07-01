@@ -1,3 +1,4 @@
+import 'package:admin/Auth/forgot_password.dart';
 import 'package:admin/Auth/signup.dart';
 import 'package:admin/Controller/sign_in_controller.dart';
 import 'package:flutter/material.dart';
@@ -37,18 +38,32 @@ class Signin extends StatelessWidget {
 
               // Icon button image
               Positioned(
-                left: -screenHeight * .05,
-                top: -screenHeight * .09,
-                child: TextButton(
-                  onPressed: () {
-                    SystemChannels.platform.invokeMethod('SystemNavigator.pop');
-                  },
-                  child: SizedBox(
-                    height: screenHeight * 0.4,
-                    width: screenWidth * 0.4,
-                    child: Image.asset(
-                      'assets/images/icon button.png',
-                      fit: BoxFit.contain,
+                left: screenHeight * .010,
+                top: -screenHeight * .01,
+                child: SizedBox(
+                  height:
+                      screenHeight * 0.2, // Optional: adjust or keep for layout
+                  width: screenWidth * 0.2,
+                  child: GestureDetector(
+                    onTap: () {
+                      SystemChannels.platform.invokeMethod(
+                        'SystemNavigator.pop',
+                      );
+                    },
+                    child: Container(
+                      width: 30, // Smaller width
+                      height: 30, // Smaller height
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFCC3E),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.arrow_back_ios,
+                          color: Color(0xFF030047),
+                          size: 30, // Optional: smaller icon to fit
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -99,9 +114,6 @@ class Signin extends StatelessWidget {
                 ),
               ),
 
-
-         
-       
               // Email or Phone field
               Positioned(
                 top: MediaQuery.of(context).size.height * 0.45,
@@ -137,7 +149,6 @@ class Signin extends StatelessWidget {
                     ),
                     filled: true,
                     fillColor: Color(0xFFE1E5F2),
-
                   ),
                 ),
               ),
@@ -208,24 +219,11 @@ class Signin extends StatelessWidget {
               Positioned(
                 bottom: screenHeight * .36,
                 right: screenHeight * .04,
-                child: Obx(
-                  () => TextButton(
-                    onPressed:
-                        (!controller.isInputEmpty.value &&
-                            controller.isInputValid.value)
-                        ? () => controller.navigateToForgotPassword()
-                        : null,
-                    child: Text(
-                      "Forgot Password?",
-                      style: TextStyle(
-                        color:
-                            (!controller.isInputEmpty.value &&
-                                controller.isInputValid.value)
-                            ? Colors.blue
-                            : Colors.grey,
-                        fontSize: 16,
-                      ),
-                    ),
+                child: TextButton(
+                  onPressed: () => Get.offAll(() => ForgotPasswordPage()),
+                  child: Text(
+                    "Forgot Password?",
+                    style: TextStyle(color: Colors.blue, fontSize: 16),
                   ),
                 ),
               ),
@@ -257,38 +255,38 @@ class Signin extends StatelessWidget {
               ),
 
               // Sign Up
-              Positioned(
-                bottom: screenHeight * .06,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: screenHeight * .02,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Get.offAll(() => Signup());
-                        },
-                        child: Text(
-                          "Create one now",
-                          style: TextStyle(
-                            color: const Color(0xFFFFCC3E),
-                            fontSize: screenHeight * .022,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Positioned(
+              //   bottom: screenHeight * .06,
+              //   left: 0,
+              //   right: 0,
+              //   child: Center(
+              //     child: Row(
+              //       mainAxisAlignment: MainAxisAlignment.center,
+              //       children: [
+              //         Text(
+              //           "Don't have an account? ",
+              //           style: TextStyle(
+              //             color: Colors.white,
+              //             fontSize: screenHeight * .02,
+              //           ),
+              //         ),
+              //         TextButton(
+              //           onPressed: () {
+              //             Get.offAll(() => Signup());
+              //           },
+              //           child: Text(
+              //             "Create one now",
+              //             style: TextStyle(
+              //               color: const Color(0xFFFFCC3E),
+              //               fontSize: screenHeight * .022,
+              //               fontWeight: FontWeight.bold,
+              //             ),
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),

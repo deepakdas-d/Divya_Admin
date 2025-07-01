@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
@@ -20,7 +22,10 @@ Future<void> listenToUser() async {
   };
 
   // Get offer from user
-  DocumentSnapshot doc = await FirebaseFirestore.instance.collection('calls').doc('live-call').get();
+  DocumentSnapshot doc = await FirebaseFirestore.instance
+      .collection('calls')
+      .doc('live-call')
+      .get();
   final offer = doc['offer'];
   await _peerConnection!.setRemoteDescription(
     RTCSessionDescription(offer['sdp'], offer['type']),

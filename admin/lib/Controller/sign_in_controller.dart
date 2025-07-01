@@ -1,4 +1,4 @@
-import 'package:admin/Auth/forgot_password.dart';
+// import 'package:admin/Auth/forgot_password.dart';
 import 'package:admin/home.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -109,35 +109,38 @@ class SigninController extends GetxController {
         colorText: const Color(0xFF030047),
       );
     } else {
-      Get.snackbar("Error", result, snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        "Login Failed",
+        "Please Enter valid email, phone number, or password",
+      );
     }
   }
 
-  Future<void> navigateToForgotPassword() async {
-    final input = emailOrPhoneController.text.trim();
-    String? email;
+  // Future<void> navigateToForgotPassword() async {
+  //   final input = emailOrPhoneController.text.trim();
+  //   String? email;
 
-    if (_isValidEmail(input)) {
-      email = input;
-    } else if (_isValidPhone(input)) {
-      QuerySnapshot query = await FirebaseFirestore.instance
-          .collection('admins')
-          .where('phone', isEqualTo: input)
-          .limit(1)
-          .get();
-      if (query.docs.isNotEmpty) {
-        email = query.docs.first.get('email');
-      } else {
-        Get.snackbar('Error', 'No account found for this phone number');
-        return;
-      }
-    } else {
-      Get.snackbar('Error', 'Invalid email or phone number format');
-      return;
-    }
+  //   if (_isValidEmail(input)) {
+  //     email = input;
+  //   } else if (_isValidPhone(input)) {
+  //     QuerySnapshot query = await FirebaseFirestore.instance
+  //         .collection('admins')
+  //         .where('phone', isEqualTo: input)
+  //         .limit(1)
+  //         .get();
+  //     if (query.docs.isNotEmpty) {
+  //       email = query.docs.first.get('email');
+  //     } else {
+  //       Get.snackbar('Error', 'No account found for this phone number');
+  //       return;
+  //     }
+  //   } else {
+  //     Get.snackbar('Error', 'Invalid email or phone number format');
+  //     return;
+  //   }
 
-    Get.to(() => ForgotPasswordPage(email: email!));
-  }
+  //   Get.to(() => ForgotPasswordPage(email: email!));
+  // }
 
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
