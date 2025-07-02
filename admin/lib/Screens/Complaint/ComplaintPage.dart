@@ -419,9 +419,6 @@ class ComplaintPage extends StatelessWidget {
       case 'resolved':
         color = Colors.green;
         break;
-      case 'closed':
-        color = Colors.grey;
-        break;
       default:
         color = Colors.grey;
     }
@@ -436,8 +433,7 @@ class ComplaintPage extends StatelessWidget {
       child: Text(
         status.toUpperCase(),
         style: TextStyle(
-          color:
-              color, // Fixed: Use calculated color instead of Colors.yellowAccent
+          color: color,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),

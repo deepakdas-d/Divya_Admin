@@ -17,7 +17,6 @@ class ComplaintController extends GetxController {
     'pending',
     'in-progress',
     'resolved',
-    'closed',
   ];
 
   final List<String> priorityOptions = ['All', '1', '2', '3'];
@@ -26,10 +25,7 @@ class ComplaintController extends GetxController {
     'All',
     'General',
     'Technical Issue',
-    'Billing',
-    'Service Quality',
     'Staff Behavior',
-    'Facility',
     'Other',
   ];
 
@@ -92,37 +88,6 @@ class ComplaintController extends GetxController {
       return const Stream.empty();
     }
   }
-
-  // Helper method to convert priority text to number (keeping for potential future use)
-  // int _getPriorityValue(String priorityText) {
-  //   switch (priorityText) {
-  //     case 'Low':
-  //     case '1':
-  //       return 1;
-  //     case 'Medium':
-  //     case '2':
-  //       return 2;
-  //     case 'High':
-  //     case '3':
-  //       return 3;
-  //     default:
-  //       return 1;
-  //   }
-  // }
-
-  // // Helper method to convert priority number to text
-  // String _getPriorityText(int priorityValue) {
-  //   switch (priorityValue) {
-  //     case 1:
-  //       return 'Low';
-  //     case 2:
-  //       return 'Medium';
-  //     case 3:
-  //       return 'High';
-  //     default:
-  //       return 'Low';
-  //   }
-  // }
 
   Future<String> getUserRoleByUid(String uid) async {
     debugPrint("START: Fetching user role for userId: $uid");

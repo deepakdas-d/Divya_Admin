@@ -53,6 +53,14 @@ class ComplaintDetailController extends GetxController {
         return;
       }
 
+      // Fetch the complaint document to get the userId
+      final complaintDoc = await firestore
+          .collection('complaints')
+          .doc(complaintData['docId'])
+          .get();
+
+      final String complaintUserId = complaintDoc['userId'];
+
       // Use a consistent document ID based on complaintId + userId (or just complaintId)
       final String docId = '${complaintData['complaintId']}_$currentUserId';
       final responseRef = firestore
@@ -64,8 +72,10 @@ class ComplaintDetailController extends GetxController {
         'response': responseController.text.trim(),
         'timestamp': FieldValue.serverTimestamp(),
         'respondedBy': currentUserId,
-        'statusChanged': selectedStatus.value != complaintData['status'],
+        'userId': complaintUserId,
+        'statusChanged': true,
         'newStatus': selectedStatus.value,
+        'complaint': complaintData['complaint'],
       }, SetOptions(merge: true)); // <-- Merge with existing doc if exists
 
       // Update the main complaint doc

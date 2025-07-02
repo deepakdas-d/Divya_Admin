@@ -215,7 +215,7 @@ class ComplaintDetailPage extends StatelessWidget {
                     vertical: 16,
                   ),
                 ),
-                items: ['pending', 'in-progress', 'resolved', 'closed']
+                items: ['pending', 'in-progress', 'resolved']
                     .map(
                       (status) => DropdownMenuItem(
                         value: status,
