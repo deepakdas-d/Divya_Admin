@@ -1,13 +1,17 @@
 // Individual Lead Detail Page
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'dart:developer';
+
+import 'package:admin/Controller/lead_report_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 class LeadDetailPage extends StatelessWidget {
   final Map<String, dynamic> lead;
 
-  const LeadDetailPage({super.key, required this.lead});
+  LeadDetailPage({super.key, required this.lead});
 
+  final controller = Get.put(LeadReportController());
   Color _getStatusColor(String status) {
     switch (status.toUpperCase()) {
       case 'HOT':
@@ -18,24 +22,6 @@ class LeadDetailPage extends StatelessWidget {
         return Colors.blue;
       default:
         return Colors.grey;
-    }
-  }
-
-  //salesman name fetching function
-  Future<String> getSalesmanName(String? uid) async {
-    if (uid == null || uid.isEmpty) return 'N/A';
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-      if (doc.exists) {
-        return doc.data()?['name'] ?? 'Unknown';
-      } else {
-        return 'Not Found';
-      }
-    } catch (e) {
-      return 'Error';
     }
   }
 
@@ -145,7 +131,7 @@ class LeadDetailPage extends StatelessWidget {
             // Business Information
             _buildSectionCard('Business Information', Icons.business, [
               _buildDetailRow('Product ID', lead['productID'] ?? 'N/A'),
-              buildSalesmanNameRow(lead['salesmanID']),
+              _buildDetailRow('Salesman Name', lead['salesman']),
               _buildDetailRow('Numbers', lead['nos']?.toString() ?? 'N/A'),
             ]),
 
@@ -242,21 +228,6 @@ class LeadDetailPage extends StatelessWidget {
           Expanded(child: Text(value, style: const TextStyle(fontSize: 16))),
         ],
       ),
-    );
-  }
-
-  Widget buildSalesmanNameRow(String? salesmanID) {
-    return FutureBuilder<String>(
-      future: getSalesmanName(salesmanID),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildDetailRow('Salesman', 'Loading...');
-        } else if (snapshot.hasError) {
-          return _buildDetailRow('Salesman', 'Error');
-        } else {
-          return _buildDetailRow('Salesman', snapshot.data ?? 'N/A');
-        }
-      },
     );
   }
 }

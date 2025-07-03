@@ -39,6 +39,7 @@ dependencies:
   excel: ^4.0.6
   path_provider: ^2.1.5
   device_info_plus: ^11.5.0
+  velocity_x: ^4.3.1
  
 
 dev_dependencies:

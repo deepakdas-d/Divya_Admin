@@ -1,5 +1,5 @@
 import 'package:admin/Controller/lead_report_controller.dart';
-import 'package:admin/Screens/LeadReport/individual_report.dart';
+import 'package:admin/Screens/LeadReport/individual_lead_report.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
