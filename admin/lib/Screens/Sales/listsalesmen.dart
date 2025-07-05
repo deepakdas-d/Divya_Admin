@@ -1,7 +1,6 @@
-
 import 'package:admin/Screens/Users/addusers.dart';
-import 'package:admin/Screens/Users/details.dart';
 import 'package:admin/Screens/Users/filter.dart';
+import 'package:admin/Voice/admin_audio_listener.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -286,12 +285,15 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
     query = query.where('role', isEqualTo: 'salesmen');
 
     // Apply additional filters if present
-    if (_filterGender != null)
+    if (_filterGender != null) {
       query = query.where('gender', isEqualTo: _filterGender);
-    if (_filterIsActive != null)
+    }
+    if (_filterIsActive != null) {
       query = query.where('isActive', isEqualTo: _filterIsActive);
-    if (_filterPlace != null)
+    }
+    if (_filterPlace != null) {
       query = query.where('place', isEqualTo: _filterPlace);
+    }
 
     // Apply ordering (ensure index includes createdAt)
     query = query.orderBy('createdAt', descending: true);
@@ -317,11 +319,11 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  UserDetailPage(userId: userId, userData: userData),
+              builder: (context) => AdminAudioListenPage(userId: userId),
             ),
           );
         },
+
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
