@@ -1,15 +1,28 @@
-import 'package:admin/Controller/lead_report_controller.dart';
 import 'package:admin/Screens/LeadReport/individual_lead_report.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:admin/Controller/lead_report_controller.dart';
 
 class LeadReport extends StatelessWidget {
-  const LeadReport({super.key});
-
+  LeadReport({super.key});
+  final controller = Get.put(LeadReportController());
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(LeadReportController());
+    // Calculate visible tiles based on screen height and estimated card height
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double appBarHeight = kToolbarHeight;
+    final double filterSectionHeight =
+        screenHeight * 0.25; // Approx filter height
+    final double summaryHeight = screenHeight * 0.06; // Approx summary height
+    final double cardHeight =
+        screenHeight *
+        0.18; // Approx height of each card (increased due to detailed card)
+    final int visibleTiles =
+        ((screenHeight - appBarHeight - filterSectionHeight - summaryHeight) /
+                cardHeight)
+            .ceil();
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -18,40 +31,28 @@ class LeadReport extends StatelessWidget {
           'Lead Reports',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Color(0xFF3B82F6),
+        backgroundColor: const Color(0xFF3B82F6),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          Obx(
-            () => IconButton(
-              icon: controller.isExporting.value
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.download_rounded),
-              onPressed: controller.isExporting.value
-                  ? null
-                  : controller.exportToExcel,
-              tooltip: 'Export to Excel',
-            ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Export order',
+            onPressed: () => _showExportOptions(context),
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: controller.fetchLeads,
+            onPressed: () => controller.fetchLeads(isRefresh: true),
             tooltip: 'Refresh',
           ),
         ],
       ),
       body: Column(
         children: [
-          // Enhanced Filter Section
+          // Filters Section
           Container(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+            height: filterSectionHeight * 0.8,
             decoration: const BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -67,7 +68,9 @@ class LeadReport extends StatelessWidget {
                 // Search Bar
                 Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(
+                      MediaQuery.of(context).size.width * 0.03,
+                    ),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: TextField(
@@ -75,18 +78,23 @@ class LeadReport extends StatelessWidget {
                       labelText: 'Search leads...',
                       hintText: 'Name, Lead ID, Phone, Place, or Salesman',
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: MediaQuery.of(context).size.width * 0.04,
+                        vertical: MediaQuery.of(context).size.height * 0.015,
                       ),
                       prefixIcon: Icon(
                         Icons.search_rounded,
                         color: Colors.indigo.shade600,
+                        size: MediaQuery.of(context).size.width * 0.05,
                       ),
                       suffixIcon: Obx(
                         () => controller.searchQuery.value.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(Icons.clear_rounded),
+                                icon: Icon(
+                                  Icons.clear_rounded,
+                                  size:
+                                      MediaQuery.of(context).size.width * 0.05,
+                                ),
                                 onPressed: () =>
                                     controller.searchQuery.value = '',
                               )
@@ -96,9 +104,8 @@ class LeadReport extends StatelessWidget {
                     onChanged: (value) => controller.searchQuery.value = value,
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // First Filter Row - Status and Place
+                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                // Filter Row
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -106,24 +113,33 @@ class LeadReport extends StatelessWidget {
                     children: [
                       // Salesperson Filter
                       Container(
-                        width: 220,
-                        height: 48,
-                        margin: const EdgeInsets.only(right: 12),
+                        width: MediaQuery.of(context).size.width * 0.5,
+                        height: MediaQuery.of(context).size.height * 0.06,
+                        margin: EdgeInsets.only(
+                          right: MediaQuery.of(context).size.width * 0.03,
+                        ),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            MediaQuery.of(context).size.width * 0.03,
+                          ),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
                         child: Obx(
                           () => DropdownButtonFormField<String>(
                             isExpanded: true,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Salesperson',
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                                horizontal:
+                                    MediaQuery.of(context).size.width * 0.04,
+                                vertical:
+                                    MediaQuery.of(context).size.height * 0.01,
                               ),
-                              prefixIcon: Icon(Icons.person_rounded),
+                              prefixIcon: Icon(
+                                Icons.person_rounded,
+                                size: MediaQuery.of(context).size.width * 0.05,
+                              ),
                             ),
                             value: controller.salespersonFilter.value.isEmpty
                                 ? null
@@ -141,6 +157,11 @@ class LeadReport extends StatelessWidget {
                                   child: Text(
                                     salesperson,
                                     overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize:
+                                          MediaQuery.of(context).size.width *
+                                          0.035,
+                                    ),
                                   ),
                                 );
                               }).toList(),
@@ -149,27 +170,35 @@ class LeadReport extends StatelessWidget {
                           ),
                         ),
                       ),
-
                       // Status Filter
                       Container(
-                        width: 180,
-                        height: 48,
-                        margin: const EdgeInsets.only(right: 12),
+                        width: MediaQuery.of(context).size.width * 0.4,
+                        height: MediaQuery.of(context).size.height * 0.06,
+                        margin: EdgeInsets.only(
+                          right: MediaQuery.of(context).size.width * 0.03,
+                        ),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            MediaQuery.of(context).size.width * 0.03,
+                          ),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
                         child: Obx(
                           () => DropdownButtonFormField<String>(
                             isExpanded: true,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Status',
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                                horizontal:
+                                    MediaQuery.of(context).size.width * 0.04,
+                                vertical:
+                                    MediaQuery.of(context).size.height * 0.01,
                               ),
-                              prefixIcon: Icon(Icons.filter_list_rounded),
+                              prefixIcon: Icon(
+                                Icons.filter_list_rounded,
+                                size: MediaQuery.of(context).size.width * 0.05,
+                              ),
                             ),
                             value: controller.statusFilter.value.isEmpty
                                 ? null
@@ -181,15 +210,26 @@ class LeadReport extends StatelessWidget {
                                   children: [
                                     if (status != 'All')
                                       Container(
-                                        width: 12,
-                                        height: 12,
-                                        margin: const EdgeInsets.only(right: 8),
+                                        width:
+                                            MediaQuery.of(context).size.width *
+                                            0.03,
+                                        height:
+                                            MediaQuery.of(context).size.width *
+                                            0.03,
+                                        margin: EdgeInsets.only(
+                                          right:
+                                              MediaQuery.of(
+                                                context,
+                                              ).size.width *
+                                              0.02,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: controller.getStatusColor(
                                             status,
                                           ),
                                           borderRadius: BorderRadius.circular(
-                                            6,
+                                            MediaQuery.of(context).size.width *
+                                                0.015,
                                           ),
                                           border: Border.all(
                                             color: controller
@@ -198,7 +238,14 @@ class LeadReport extends StatelessWidget {
                                           ),
                                         ),
                                       ),
-                                    Text(status),
+                                    Text(
+                                      status,
+                                      style: TextStyle(
+                                        fontSize:
+                                            MediaQuery.of(context).size.width *
+                                            0.035,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               );
@@ -207,27 +254,35 @@ class LeadReport extends StatelessWidget {
                           ),
                         ),
                       ),
-
                       // Place Filter
                       Container(
-                        width: 180,
-                        height: 48,
-                        margin: const EdgeInsets.only(right: 12),
+                        width: MediaQuery.of(context).size.width * 0.4,
+                        height: MediaQuery.of(context).size.height * 0.06,
+                        margin: EdgeInsets.only(
+                          right: MediaQuery.of(context).size.width * 0.03,
+                        ),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            MediaQuery.of(context).size.width * 0.03,
+                          ),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
                         child: Obx(
                           () => DropdownButtonFormField<String>(
                             isExpanded: true,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Place',
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                                horizontal:
+                                    MediaQuery.of(context).size.width * 0.04,
+                                vertical:
+                                    MediaQuery.of(context).size.height * 0.01,
                               ),
-                              prefixIcon: Icon(Icons.location_on_rounded),
+                              prefixIcon: Icon(
+                                Icons.location_on_rounded,
+                                size: MediaQuery.of(context).size.width * 0.05,
+                              ),
                             ),
                             value: controller.placeFilter.value.isEmpty
                                 ? null
@@ -243,6 +298,11 @@ class LeadReport extends StatelessWidget {
                                   child: Text(
                                     place,
                                     overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize:
+                                          MediaQuery.of(context).size.width *
+                                          0.035,
+                                    ),
                                   ),
                                 );
                               }).toList(),
@@ -251,10 +311,9 @@ class LeadReport extends StatelessWidget {
                           ),
                         ),
                       ),
-
                       // Date Range Button
                       SizedBox(
-                        width: 170,
+                        width: MediaQuery.of(context).size.width * 0.38,
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             final picked = await showDateRangePicker(
@@ -274,33 +333,41 @@ class LeadReport extends StatelessWidget {
                             );
                             controller.setDateRange(picked);
                           },
-                          icon: const Icon(Icons.date_range_rounded),
+                          icon: Icon(
+                            Icons.date_range_rounded,
+                            size: MediaQuery.of(context).size.width * 0.05,
+                          ),
                           label: Obx(
                             () => Text(
                               controller.startDate.value != null
                                   ? 'Date Selected'
                                   : 'Select Date',
-                              style: const TextStyle(fontSize: 12),
+                              style: TextStyle(
+                                fontSize:
+                                    MediaQuery.of(context).size.width * 0.03,
+                              ),
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.indigo.shade50,
                             foregroundColor: Colors.indigo.shade700,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 8,
+                            padding: EdgeInsets.symmetric(
+                              vertical:
+                                  MediaQuery.of(context).size.height * 0.015,
+                              horizontal:
+                                  MediaQuery.of(context).size.width * 0.02,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                MediaQuery.of(context).size.width * 0.03,
+                              ),
                               side: BorderSide(color: Colors.grey.shade300),
                             ),
                           ),
                         ),
                       ),
-
-                      const SizedBox(width: 12),
-
+                      SizedBox(width: MediaQuery.of(context).size.width * 0.03),
                       // Clear Filters Button
                       Obx(
                         () =>
@@ -314,6 +381,8 @@ class LeadReport extends StatelessWidget {
                                 icon: Icon(
                                   Icons.clear_all_rounded,
                                   color: Colors.red.shade600,
+                                  size:
+                                      MediaQuery.of(context).size.width * 0.05,
                                 ),
                                 tooltip: 'Clear Filters',
                               )
@@ -322,15 +391,16 @@ class LeadReport extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
               ],
             ),
           ),
-
           // Stats Row
           Obx(
             () => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              height: summaryHeight * 1.3,
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width * 0.04,
+              ),
               color: Colors.white,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -339,6 +409,7 @@ class LeadReport extends StatelessWidget {
                     'Total',
                     controller.filteredLeads.length.toString(),
                     Colors.blue,
+                    context,
                   ),
                   _buildStatCard(
                     'Hot',
@@ -347,6 +418,7 @@ class LeadReport extends StatelessWidget {
                         .length
                         .toString(),
                     Colors.red,
+                    context,
                   ),
                   _buildStatCard(
                     'Warm',
@@ -355,6 +427,7 @@ class LeadReport extends StatelessWidget {
                         .length
                         .toString(),
                     Colors.orange,
+                    context,
                   ),
                   _buildStatCard(
                     'Cold',
@@ -363,82 +436,71 @@ class LeadReport extends StatelessWidget {
                         .length
                         .toString(),
                     Colors.indigo,
+                    context,
                   ),
                 ],
               ),
             ),
           ),
-
           // Content Area
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value &&
-                  !controller.isDataLoaded.value) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text(
-                        'Loading leads...',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                );
+                  controller.paginatedLeads.isEmpty) {
+                return _buildShimmerList(context, visibleTiles);
               }
 
-              if (!controller.isDataLoaded.value) {
-                return const Center(child: Text('No data available'));
-              }
-
-              if (controller.filteredLeads.isEmpty) {
+              if (controller.paginatedLeads.isEmpty &&
+                  !controller.isLoading.value) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.search_off_rounded,
-                        size: 64,
+                        size: MediaQuery.of(context).size.width * 0.15,
                         color: Colors.grey.shade400,
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.02,
+                      ),
                       Text(
                         'No leads found',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: MediaQuery.of(context).size.width * 0.045,
                           color: Colors.grey.shade600,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.01,
+                      ),
                       Text(
                         'Try adjusting your filters',
-                        style: TextStyle(color: Colors.grey.shade500),
+                        style: TextStyle(
+                          fontSize: MediaQuery.of(context).size.width * 0.035,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
                 );
               }
 
-              return Column(
-                children: [
-                  // Lead List
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: controller.paginatedLeads.length,
-                      itemBuilder: (context, index) {
-                        final lead = controller.paginatedLeads[index];
-                        return _buildLeadCard(context, lead, controller);
-                      },
-                    ),
-                  ),
-
-                  // Pagination Controls
-                  if (controller.totalPages.value > 1)
-                    _buildPaginationControls(controller),
-                ],
+              return ListView.builder(
+                controller: controller.scrollController,
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width * 0.04,
+                ),
+                itemCount:
+                    controller.paginatedLeads.length +
+                    (controller.isLoadingMore.value ? visibleTiles : 0),
+                itemBuilder: (context, index) {
+                  if (index >= controller.paginatedLeads.length) {
+                    return _buildShimmerCard(context);
+                  }
+                  final lead = controller.paginatedLeads[index];
+                  return _buildLeadCard(context, lead, controller);
+                },
               );
             }),
           ),
@@ -447,23 +509,33 @@ class LeadReport extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    Color color,
+    BuildContext context,
+  ) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(
+          vertical: MediaQuery.of(context).size.height * 0.01,
+        ),
         child: Column(
           children: [
             Text(
               value,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: MediaQuery.of(context).size.width * 0.05,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
             Text(
               label,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: MediaQuery.of(context).size.width * 0.03,
+                color: Colors.grey.shade600,
+              ),
             ),
           ],
         ),
@@ -477,10 +549,14 @@ class LeadReport extends StatelessWidget {
     LeadReportController controller,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(
+        bottom: MediaQuery.of(context).size.height * 0.015,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(
+          MediaQuery.of(context).size.width * 0.04,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -493,9 +569,11 @@ class LeadReport extends StatelessWidget {
         onTap: () {
           Get.to(() => LeadDetailPage(lead: lead));
         },
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(
+          MediaQuery.of(context).size.width * 0.04,
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -504,6 +582,7 @@ class LeadReport extends StatelessWidget {
                 children: [
                   // Profile Avatar
                   CircleAvatar(
+                    radius: MediaQuery.of(context).size.width * 0.05,
                     backgroundColor: Colors.indigo.shade100,
                     child: Text(
                       lead['name'].toString().isNotEmpty
@@ -512,11 +591,11 @@ class LeadReport extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.indigo.shade700,
                         fontWeight: FontWeight.bold,
+                        fontSize: MediaQuery.of(context).size.width * 0.04,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-
+                  SizedBox(width: MediaQuery.of(context).size.width * 0.03),
                   // Name and Lead ID
                   Expanded(
                     child: Column(
@@ -524,31 +603,32 @@ class LeadReport extends StatelessWidget {
                       children: [
                         Text(
                           lead['name'] ?? 'Unknown',
-                          style: const TextStyle(
-                            fontSize: 16,
+                          style: TextStyle(
+                            fontSize: MediaQuery.of(context).size.width * 0.04,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
                           'ID: ${lead['leadId']}',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: MediaQuery.of(context).size.width * 0.03,
                             color: Colors.grey.shade600,
                           ),
                         ),
                       ],
                     ),
                   ),
-
                   // Status Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: MediaQuery.of(context).size.width * 0.02,
+                      vertical: MediaQuery.of(context).size.height * 0.005,
                     ),
                     decoration: BoxDecoration(
                       color: controller.getStatusColor(lead['status']),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(
+                        MediaQuery.of(context).size.width * 0.03,
+                      ),
                       border: Border.all(
                         color: controller.getStatusTextColor(lead['status']),
                         width: 1,
@@ -557,7 +637,7 @@ class LeadReport extends StatelessWidget {
                     child: Text(
                       lead['status'] ?? 'N/A',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: MediaQuery.of(context).size.width * 0.028,
                         fontWeight: FontWeight.bold,
                         color: controller.getStatusTextColor(lead['status']),
                       ),
@@ -565,9 +645,7 @@ class LeadReport extends StatelessWidget {
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12),
-
+              SizedBox(height: MediaQuery.of(context).size.height * 0.015),
               // Details Grid
               Row(
                 children: [
@@ -576,6 +654,7 @@ class LeadReport extends StatelessWidget {
                       Icons.phone_rounded,
                       'Phone',
                       lead['phone1'] ?? 'N/A',
+                      context,
                     ),
                   ),
                   Expanded(
@@ -583,13 +662,12 @@ class LeadReport extends StatelessWidget {
                       Icons.person_rounded,
                       'Salesman',
                       lead['salesman'] ?? 'N/A',
+                      context,
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 8),
-
+              SizedBox(height: MediaQuery.of(context).size.height * 0.01),
               Row(
                 children: [
                   Expanded(
@@ -597,6 +675,7 @@ class LeadReport extends StatelessWidget {
                       Icons.location_on_rounded,
                       'Place',
                       lead['place'] ?? 'N/A',
+                      context,
                     ),
                   ),
                   Expanded(
@@ -604,22 +683,24 @@ class LeadReport extends StatelessWidget {
                       Icons.calendar_today_rounded,
                       'Created',
                       DateFormat('MMM dd, yyyy').format(lead['createdAt']),
+                      context,
                     ),
                   ),
                 ],
               ),
-
               // Follow-up indicator
               if (lead['followUpDate'] != null) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.01),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.of(context).size.width * 0.02,
+                    vertical: MediaQuery.of(context).size.height * 0.005,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(
+                      MediaQuery.of(context).size.width * 0.02,
+                    ),
                     border: Border.all(color: Colors.amber.shade200),
                   ),
                   child: Row(
@@ -627,14 +708,14 @@ class LeadReport extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.schedule_rounded,
-                        size: 14,
+                        size: MediaQuery.of(context).size.width * 0.035,
                         color: Colors.amber.shade700,
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: MediaQuery.of(context).size.width * 0.01),
                       Text(
                         'Follow-up: ${DateFormat('MMM dd').format(lead['followUpDate'])}',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: MediaQuery.of(context).size.width * 0.028,
                           color: Colors.amber.shade700,
                           fontWeight: FontWeight.w500,
                         ),
@@ -650,11 +731,20 @@ class LeadReport extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailItem(IconData icon, String label, String value) {
+  Widget _buildDetailItem(
+    IconData icon,
+    String label,
+    String value,
+    BuildContext context,
+  ) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey.shade600),
-        const SizedBox(width: 6),
+        Icon(
+          icon,
+          size: MediaQuery.of(context).size.width * 0.04,
+          color: Colors.grey.shade600,
+        ),
+        SizedBox(width: MediaQuery.of(context).size.width * 0.015),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -662,15 +752,15 @@ class LeadReport extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: MediaQuery.of(context).size.width * 0.025,
                   color: Colors.grey.shade600,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 12,
+                style: TextStyle(
+                  fontSize: MediaQuery.of(context).size.width * 0.03,
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
@@ -683,64 +773,291 @@ class LeadReport extends StatelessWidget {
     );
   }
 
-  Widget _buildPaginationControls(LeadReportController controller) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.black12)),
-      ),
-      child: Obx(
-        () => Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Previous Button
-            ElevatedButton.icon(
-              onPressed: controller.currentPage.value > 0
-                  ? controller.previousPage
-                  : null,
-              icon: const Icon(Icons.chevron_left_rounded),
-              label: const Text('Previous'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade100,
-                foregroundColor: Colors.grey.shade700,
-                elevation: 0,
-              ),
-            ),
-
-            // Page Info
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.indigo.shade50,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'Page ${controller.currentPage.value + 1} of ${controller.totalPages.value}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.indigo.shade700,
-                ),
-              ),
-            ),
-
-            // Next Button
-            ElevatedButton.icon(
-              onPressed:
-                  controller.currentPage.value < controller.totalPages.value - 1
-                  ? controller.nextPage
-                  : null,
-              icon: const Icon(Icons.chevron_right_rounded),
-              label: const Text('Next'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo.shade100,
-                foregroundColor: Colors.indigo.shade700,
-                elevation: 0,
-              ),
+  Widget _buildShimmerCard(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height * 0.015,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(
+            MediaQuery.of(context).size.width * 0.04,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
+        child: Padding(
+          padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: MediaQuery.of(context).size.width * 0.05,
+                    backgroundColor: Colors.grey[300],
+                  ),
+                  SizedBox(width: MediaQuery.of(context).size.width * 0.03),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: MediaQuery.of(context).size.width * 0.4,
+                          height: MediaQuery.of(context).size.height * 0.02,
+                          color: Colors.white,
+                        ),
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.005,
+                        ),
+                        Container(
+                          width: MediaQuery.of(context).size.width * 0.3,
+                          height: MediaQuery.of(context).size.height * 0.015,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: MediaQuery.of(context).size.width * 0.15,
+                    height: MediaQuery.of(context).size.height * 0.02,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.015),
+              // Details Grid
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: MediaQuery.of(context).size.width * 0.04,
+                          height: MediaQuery.of(context).size.width * 0.04,
+                          color: Colors.white,
+                        ),
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.015,
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: MediaQuery.of(context).size.width * 0.2,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.015,
+                                color: Colors.white,
+                              ),
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.005,
+                              ),
+                              Container(
+                                width: MediaQuery.of(context).size.width * 0.25,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.015,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: MediaQuery.of(context).size.width * 0.04,
+                          height: MediaQuery.of(context).size.width * 0.04,
+                          color: Colors.white,
+                        ),
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.015,
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: MediaQuery.of(context).size.width * 0.2,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.015,
+                                color: Colors.white,
+                              ),
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.005,
+                              ),
+                              Container(
+                                width: MediaQuery.of(context).size.width * 0.25,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.015,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: MediaQuery.of(context).size.width * 0.04,
+                          height: MediaQuery.of(context).size.width * 0.04,
+                          color: Colors.white,
+                        ),
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.015,
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: MediaQuery.of(context).size.width * 0.2,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.015,
+                                color: Colors.white,
+                              ),
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.005,
+                              ),
+                              Container(
+                                width: MediaQuery.of(context).size.width * 0.25,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.015,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: MediaQuery.of(context).size.width * 0.04,
+                          height: MediaQuery.of(context).size.width * 0.04,
+                          color: Colors.white,
+                        ),
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.015,
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: MediaQuery.of(context).size.width * 0.2,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.015,
+                                color: Colors.white,
+                              ),
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.005,
+                              ),
+                              Container(
+                                width: MediaQuery.of(context).size.width * 0.25,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.015,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildShimmerList(BuildContext context, int visibleTiles) {
+    return ListView.builder(
+      padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+      itemCount: visibleTiles,
+      itemBuilder: (context, index) => _buildShimmerCard(context),
+    );
+  }
+
+  void _showExportOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Export Order As',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.picture_as_pdf),
+                    label: const Text('PDF'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      controller.exportToPdf();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.grid_on),
+                    label: const Text('Excel'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      controller.exportToExcel();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

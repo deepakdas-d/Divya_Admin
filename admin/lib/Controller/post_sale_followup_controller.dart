@@ -6,8 +6,8 @@ import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:pdf/widgets.dart' as pw;
 
-// Controller
 class PostSaleFollowupController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -19,14 +19,16 @@ class PostSaleFollowupController extends GetxController {
       <Map<String, dynamic>>[].obs;
 
   final RxString statusFilter = 'All'.obs;
-  final RxString placeFilter = ''.obs; // Place filter
-  final RxString salespersonFilter = ''.obs; // Salesperson filter
+  final RxString placeFilter = ''.obs;
+  final RxString salespersonFilter = ''.obs;
   final Rx<DateTime?> startDate = Rx<DateTime?>(null);
   final Rx<DateTime?> endDate = Rx<DateTime?>(null);
   final RxString searchQuery = ''.obs;
   final RxBool isLoading = false.obs;
   final RxBool isDataLoaded = false.obs;
   final RxBool isExporting = false.obs;
+  final RxBool isLoadingMore = false.obs;
+  final RxBool hasMoreData = true.obs;
 
   // Status options
   final List<String> statusOptions = [
@@ -41,11 +43,10 @@ class PostSaleFollowupController extends GetxController {
   final RxList<String> availablePlaces = <String>[].obs;
   final RxList<String> availableSalespeople = <String>[].obs;
 
-  // Pagination variables
-  final RxInt currentPage = 0.obs;
-  final int itemsPerPage = 15;
-  final RxInt totalPages = 0.obs;
-  final RxBool isLoadingMore = false.obs;
+  // Pagination and lazy loading variables
+  final int itemsPerPage = 8;
+  DocumentSnapshot? _lastDocument;
+  final ScrollController scrollController = ScrollController();
 
   @override
   void onInit() {
@@ -58,6 +59,24 @@ class PostSaleFollowupController extends GetxController {
       (_) => filterOrders(),
       time: const Duration(milliseconds: 500),
     );
+
+    // Add scroll listener for infinite scrolling
+    scrollController.addListener(_scrollListener);
+  }
+
+  @override
+  void onClose() {
+    scrollController.dispose();
+    super.onClose();
+  }
+
+  void _scrollListener() {
+    if (scrollController.position.pixels >=
+            scrollController.position.maxScrollExtent - 200 &&
+        !isLoadingMore.value &&
+        hasMoreData.value) {
+      fetchMoreOrders();
+    }
   }
 
   Future<String> getSalesmanName(String? uid) async {
@@ -76,21 +95,60 @@ class PostSaleFollowupController extends GetxController {
     }
   }
 
-  Future<void> fetchOrders() async {
+  Future<String> getmakerName(String? uid) async {
+    if (uid == null || uid.isEmpty) return 'N/A';
     try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists) {
+        final name = doc.data()?['name'];
+        return name ?? 'Unknown';
+      } else {
+        return 'Not Found';
+      }
+    } catch (e) {
+      log('Error fetching user for $uid: $e');
+      return 'Error';
+    }
+  }
+
+  Future<void> fetchOrders({bool isRefresh = false}) async {
+    try {
+      if (isRefresh) {
+        _lastDocument = null;
+        allOrders.clear();
+        hasMoreData.value = true;
+      }
+
       isLoading.value = true;
-      QuerySnapshot orderSnapshot = await _firestore
+      Query<Map<String, dynamic>> query = _firestore
           .collection('Orders')
+          .orderBy('createdAt', descending: true)
           .where('order_status', isEqualTo: 'delivered')
-          .get();
+          .limit(itemsPerPage);
+
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
+
+      QuerySnapshot<Map<String, dynamic>> orderSnapshot = await query.get();
+
+      if (orderSnapshot.docs.isEmpty) {
+        hasMoreData.value = false;
+        isLoading.value = false;
+        return;
+      }
+
       List<Map<String, dynamic>> tempOrders = [];
       Set<String> placesSet = <String>{};
       Set<String> salespeopleSet = <String>{};
 
       for (var doc in orderSnapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         final String? salesmanID = data['salesmanID'];
         final String salesmanName = await getSalesmanName(salesmanID);
+        final String? makerID = data['makerId'];
+        final String maker = await getmakerName(makerID);
+        log('Maker is $maker');
 
         tempOrders.add({
           'address': data['address'] ?? '',
@@ -109,10 +167,10 @@ class PostSaleFollowupController extends GetxController {
           'productID': data['productID'] ?? '',
           'remark': data['remark'] ?? '',
           'salesman': salesmanName,
-          'status': data['status'] ?? '',
+          'maker': maker,
+          'followUpNotes': data['followUpNotes'] ?? '',
         });
 
-        // Collect unique places and salespeople for filter options
         final place = data['place']?.toString().trim();
         if (place != null && place.isNotEmpty) {
           placesSet.add(place);
@@ -122,12 +180,9 @@ class PostSaleFollowupController extends GetxController {
         }
       }
 
-      // Sort by creation date (newest first)
-      tempOrders.sort((a, b) => b['createdAt'].compareTo(a['createdAt']));
+      _lastDocument = orderSnapshot.docs.last;
+      allOrders.addAll(tempOrders);
 
-      allOrders.value = tempOrders;
-
-      // Update filter options
       availablePlaces.value = placesSet.toList()..sort();
       availableSalespeople.value = salespeopleSet.toList()..sort();
 
@@ -146,21 +201,29 @@ class PostSaleFollowupController extends GetxController {
     }
   }
 
+  Future<void> fetchMoreOrders() async {
+    if (!hasMoreData.value || isLoadingMore.value) return;
+
+    try {
+      isLoadingMore.value = true;
+      await fetchOrders();
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
+
   void filterOrders() {
     List<Map<String, dynamic>> filtered = allOrders.where((order) {
       bool matches = true;
 
-      // Filter by status (using the new status options)
       if (statusFilter.value.isNotEmpty && statusFilter.value != 'All') {
         matches = matches && order['order_status'] == statusFilter.value;
       }
 
-      // Place filter
       if (placeFilter.value.isNotEmpty && placeFilter.value != 'All') {
         matches = matches && order['place'] == placeFilter.value;
       }
 
-      // Salesperson filter
       if (salespersonFilter.value.isNotEmpty &&
           salespersonFilter.value != 'All') {
         matches = matches && order['salesman'] == salespersonFilter.value;
@@ -193,40 +256,7 @@ class PostSaleFollowupController extends GetxController {
     }).toList();
 
     filteredOrders.value = filtered;
-    currentPage.value = 0;
-    updatePagination();
-  }
-
-  void updatePagination() {
-    totalPages.value = (filteredOrders.length / itemsPerPage).ceil();
-    final startIndex = currentPage.value * itemsPerPage;
-    final endIndex = (startIndex + itemsPerPage).clamp(
-      0,
-      filteredOrders.length,
-    );
-
-    paginatedOrders.value = filteredOrders.sublist(startIndex, endIndex);
-  }
-
-  void nextPage() {
-    if (currentPage.value < totalPages.value - 1) {
-      currentPage.value++;
-      updatePagination();
-    }
-  }
-
-  void previousPage() {
-    if (currentPage.value > 0) {
-      currentPage.value--;
-      updatePagination();
-    }
-  }
-
-  void goToPage(int page) {
-    if (page >= 0 && page < totalPages.value) {
-      currentPage.value = page;
-      updatePagination();
-    }
+    paginatedOrders.value = filtered;
   }
 
   void setStatusFilter(String? status) {
@@ -300,7 +330,7 @@ class PostSaleFollowupController extends GetxController {
       if (!hasPermission) return;
 
       final excel = Excel.createExcel();
-      final sheet = excel['Orders'];
+      final sheet = excel['PostSaleFollowup'];
 
       final headers = [
         'Order ID',
@@ -318,7 +348,8 @@ class PostSaleFollowupController extends GetxController {
         'Follow Up Date',
         'Nos',
         'Remark',
-        'Maker ID',
+        'Maker',
+        'Review ',
       ];
 
       final columnWidths = [
@@ -331,13 +362,14 @@ class PostSaleFollowupController extends GetxController {
         15,
         15,
         15,
-        20, // Increased width for order status
+        20,
         20,
         20,
         20,
         10,
         25,
         25,
+        20,
       ];
 
       for (int i = 0; i < headers.length; i++) {
@@ -372,7 +404,8 @@ class PostSaleFollowupController extends GetxController {
           (order['followUpDate'] as DateTime?)?.toString().split('.')[0] ?? '',
           order['nos']?.toString() ?? '',
           order['remark'] ?? '',
-          order['makerId'] ?? '',
+          order['maker'] ?? '',
+          order['followUpNotes'] ?? '',
         ];
 
         for (int colIndex = 0; colIndex < rowData.length; colIndex++) {
@@ -384,7 +417,6 @@ class PostSaleFollowupController extends GetxController {
           );
           cell.value = TextCellValue(rowData[colIndex]);
 
-          // Updated status coloring for column 8 (status field)
           if (colIndex == 8) {
             final status = order['status'];
             cell.cellStyle = CellStyle(
@@ -402,7 +434,6 @@ class PostSaleFollowupController extends GetxController {
             );
           }
 
-          // Updated order status coloring for column 9 (order_status field)
           if (colIndex == 9) {
             final orderStatus = order['order_status'];
             cell.cellStyle = CellStyle(
@@ -473,7 +504,167 @@ class PostSaleFollowupController extends GetxController {
     }
   }
 
-  // Updated status color methods
+  Future<void> exportToPdf() async {
+    try {
+      final hasPermission = await checkStoragePermission();
+      if (!hasPermission) return;
+
+      final pdf = pw.Document();
+
+      for (var order in filteredOrders) {
+        pdf.addPage(
+          pw.Page(
+            build: (pw.Context context) => pw.Padding(
+              padding: const pw.EdgeInsets.all(24),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'Order Report',
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 16),
+                  _pdfRow('Order ID', order['orderId'] ?? ''),
+                  _pdfRow('Name', order['name'] ?? ''),
+                  _pdfRow('Primary Phone', order['phone1'] ?? ''),
+                  if (order['phone2'] != null &&
+                      order['phone2'].toString().isNotEmpty)
+                    _pdfRow('Secondary Phone', order['phone2']),
+                  _pdfRow('Address', order['address'] ?? ''),
+                  _pdfRow('Place', order['place'] ?? ''),
+                  _pdfRow('Product ID', order['productID'] ?? ''),
+                  _pdfRow('Salesman', order['salesman'] ?? ''),
+                  _pdfRow('Maker', order['maker'] ?? ''),
+                  _pdfRow('Review', order['followUpNotes'] ?? 'N/A'),
+                  _pdfRow('Order Status', order['order_status'] ?? ''),
+                  _pdfRow(
+                    'Created At',
+                    (order['createdAt'] as DateTime?)?.toString().split(
+                          '.',
+                        )[0] ??
+                        '',
+                  ),
+                  _pdfRow(
+                    'Delivery Date',
+                    (order['deliveryDate'] as DateTime?)?.toString().split(
+                          '.',
+                        )[0] ??
+                        '',
+                  ),
+                  _pdfRow(
+                    'Follow Up Date',
+                    (order['followUpDate'] as DateTime?)?.toString().split(
+                          '.',
+                        )[0] ??
+                        '',
+                  ),
+                  _pdfRow('Nos', order['nos']?.toString() ?? ''),
+                  if (order['remark'] != null &&
+                      order['remark'].toString().isNotEmpty)
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.SizedBox(height: 12),
+                        pw.Text(
+                          'Remark:',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.Text(order['remark']),
+                      ],
+                    ),
+                  if (order['followUpNotes'] != null &&
+                      order['followUpNotes'].toString().isNotEmpty)
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.SizedBox(height: 12),
+                        pw.Text(
+                          'Follow Up Notes:',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.Text(order['followUpNotes']),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      // Add a summary page
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) => pw.Padding(
+            padding: const pw.EdgeInsets.all(24),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Summary',
+                  style: pw.TextStyle(
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 16),
+                pw.Text('Total Orders: ${filteredOrders.length}'),
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  'Generated on: ${DateTime.now().toString().split('.')[0]}',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final dir = Directory('/storage/emulated/0/Download');
+      final file = File(
+        '${dir.path}/orders_data_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      );
+      await file.writeAsBytes(await pdf.save());
+
+      Get.snackbar(
+        'Success',
+        'PDF exported to Downloads folder',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Export Failed',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  pw.Widget _pdfRow(String label, dynamic value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 6),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            width: 120,
+            child: pw.Text(
+              '$label:',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Expanded(child: pw.Text(value?.toString() ?? '')),
+        ],
+      ),
+    );
+  }
+
   Color getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'delivered':
@@ -508,7 +699,6 @@ class PostSaleFollowupController extends GetxController {
     }
   }
 
-  // Updated order status color methods
   Color getOrderStatusColor(String orderStatus) {
     switch (orderStatus.toLowerCase()) {
       case 'delivered':

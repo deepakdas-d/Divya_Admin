@@ -1,10 +1,9 @@
-import 'dart:developer';
-
 import 'package:admin/Controller/post_sale_followup_controller.dart';
-import 'package:admin/Screens/Orders/individual_order_report.dart';
+import 'package:admin/Screens/PostSaleFollowUp/individual_post_followup.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 
 class Postsalefollowup extends StatelessWidget {
   final PostSaleFollowupController controller = Get.put(
@@ -15,32 +14,31 @@ class Postsalefollowup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  
+    // Calculate visible tiles based on screen height and estimated card height
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double appBarHeight = kToolbarHeight;
+    final double filterSectionHeight =
+        screenHeight * 0.25; // Approx filter height
+    final double summaryHeight = screenHeight * 0.06; // Approx summary height
+    final double cardHeight = screenHeight * 0.12; // Approx height of each card
+    final int visibleTiles =
+        ((screenHeight - appBarHeight - filterSectionHeight - summaryHeight) /
+                cardHeight)
+            .ceil();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Follow Up Orders'),
+        title: const Text('Post Sales Reports'),
         backgroundColor: Colors.blue.shade600,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          Obx(
-            () => IconButton(
-              onPressed: controller.isExporting.value
-                  ? null
-                  : controller.exportToExcel,
-              icon: controller.isExporting.value
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.download),
-              tooltip: 'Export to Excel',
-            ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Export order',
+            onPressed: () => _showExportOptions(context),
           ),
+
           IconButton(
             onPressed: controller.clearFilters,
             icon: const Icon(Icons.clear_all),
@@ -48,7 +46,7 @@ class Postsalefollowup extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: controller.fetchOrders,
+            onPressed: () => controller.fetchOrders(isRefresh: true),
             tooltip: 'Refresh',
           ),
         ],
@@ -57,7 +55,8 @@ class Postsalefollowup extends StatelessWidget {
         children: [
           // Filters Section
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+            height: filterSectionHeight * 0.75,
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
@@ -72,17 +71,19 @@ class Postsalefollowup extends StatelessWidget {
                         'Search by name, order ID, phone, salesman, or place...',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(
+                        MediaQuery.of(context).size.width * 0.02,
+                      ),
                     ),
                     filled: true,
                     fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: MediaQuery.of(context).size.width * 0.04,
+                      vertical: MediaQuery.of(context).size.height * 0.015,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                 // Filter Row
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -98,20 +99,17 @@ class Postsalefollowup extends StatelessWidget {
                             'All',
                             'pending',
                             'accepted',
-                            'inprogress',
                             'sent out for delivery',
                             'delivered',
                           ],
                           onChanged: controller.setStatusFilter,
                         ),
                       ),
-
-                      const SizedBox(width: 12),
+                      SizedBox(width: MediaQuery.of(context).size.width * 0.03),
                       // Place Filter
                       Obx(
                         () => _buildFilterDropdown(
                           context: context,
-
                           label: 'Place',
                           value: controller.placeFilter.value.isEmpty
                               ? null
@@ -120,7 +118,7 @@ class Postsalefollowup extends StatelessWidget {
                           onChanged: controller.setPlaceFilter,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: MediaQuery.of(context).size.width * 0.03),
                       // Salesperson Filter
                       Obx(
                         () => _buildFilterDropdown(
@@ -133,9 +131,9 @@ class Postsalefollowup extends StatelessWidget {
                           onChanged: controller.setSalespersonFilter,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: MediaQuery.of(context).size.width * 0.03),
                       // Date Range Filter
-                      _buildDateRangeFilter(),
+                      _buildDateRangeFilter(context),
                     ],
                   ),
                 ),
@@ -145,23 +143,22 @@ class Postsalefollowup extends StatelessWidget {
           // Summary Section
           Obx(
             () => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width * 0.04,
+                vertical: MediaQuery.of(context).size.height * 0.01,
+              ),
+              height: summaryHeight,
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
                 border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Text(
                     'Total Orders: ${controller.filteredOrders.length}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  if (controller.filteredOrders.isNotEmpty)
-                    Text(
-                      'Page ${controller.currentPage.value + 1} of ${controller.totalPages.value}',
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
                 ],
               ),
             ),
@@ -169,20 +166,31 @@ class Postsalefollowup extends StatelessWidget {
           // Orders List
           Expanded(
             child: Obx(() {
-              if (controller.isLoading.value) {
-                return const Center(child: CircularProgressIndicator());
+              if (controller.isLoading.value &&
+                  controller.paginatedOrders.isEmpty) {
+                return _buildShimmerList(context, visibleTiles);
               }
 
-              if (controller.filteredOrders.isEmpty) {
-                return const Center(
+              if (controller.paginatedOrders.isEmpty &&
+                  !controller.isLoading.value) {
+                return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.inbox_outlined, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
+                      Icon(
+                        Icons.inbox_outlined,
+                        size: MediaQuery.of(context).size.width * 0.15,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.02,
+                      ),
                       Text(
                         'No orders found',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: MediaQuery.of(context).size.width * 0.045,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -190,20 +198,22 @@ class Postsalefollowup extends StatelessWidget {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: controller.paginatedOrders.length,
+                controller: controller.scrollController,
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width * 0.04,
+                ),
+                itemCount:
+                    controller.paginatedOrders.length +
+                    (controller.isLoadingMore.value ? visibleTiles : 0),
                 itemBuilder: (context, index) {
+                  if (index >= controller.paginatedOrders.length) {
+                    return _buildShimmerCard(context);
+                  }
                   final order = controller.paginatedOrders[index];
                   return _buildOrderCard(order, context);
                 },
               );
             }),
-          ),
-          // Pagination
-          Obx(
-            () => controller.totalPages.value > 1
-                ? _buildPagination()
-                : const SizedBox(),
           ),
         ],
       ),
@@ -218,34 +228,42 @@ class Postsalefollowup extends StatelessWidget {
     required Function(String?) onChanged,
   }) {
     return SizedBox(
-      width: MediaQuery.of(context).size.height * 0.21,
+      width: MediaQuery.of(context).size.width * 0.45,
       child: DropdownButtonFormField<String>(
         value: value,
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(
+              MediaQuery.of(context).size.width * 0.02,
+            ),
+          ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.of(context).size.width * 0.03,
+            vertical: MediaQuery.of(context).size.height * 0.01,
           ),
         ),
         items: items.map((String item) {
           return DropdownMenuItem<String>(
-            value: item, // keep 'All' as is
-            child: Text(item),
+            value: item,
+            child: Text(
+              item,
+              style: TextStyle(
+                fontSize: MediaQuery.of(context).size.width * 0.035,
+              ),
+            ),
           );
         }).toList(),
-
         onChanged: onChanged,
       ),
     );
   }
 
-  Widget _buildDateRangeFilter() {
+  Widget _buildDateRangeFilter(BuildContext context) {
     return Container(
-      width: 180,
+      width: MediaQuery.of(context).size.width * 0.4,
       child: InkWell(
         onTap: () async {
           final DateTimeRange? picked = await showDateRangePicker(
@@ -264,16 +282,24 @@ class Postsalefollowup extends StatelessWidget {
           controller.setDateRange(picked);
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.of(context).size.width * 0.03,
+            vertical: MediaQuery.of(context).size.height * 0.02,
+          ),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey.shade400),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(
+              MediaQuery.of(context).size.width * 0.02,
+            ),
             color: Colors.white,
           ),
           child: Row(
             children: [
-              const Icon(Icons.date_range, size: 20),
-              const SizedBox(width: 8),
+              Icon(
+                Icons.date_range,
+                size: MediaQuery.of(context).size.width * 0.05,
+              ),
+              SizedBox(width: MediaQuery.of(context).size.width * 0.02),
               Expanded(
                 child: Obx(
                   () => Text(
@@ -285,6 +311,7 @@ class Postsalefollowup extends StatelessWidget {
                       color: controller.startDate.value != null
                           ? Colors.black
                           : Colors.grey.shade600,
+                      fontSize: MediaQuery.of(context).size.width * 0.035,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -299,22 +326,29 @@ class Postsalefollowup extends StatelessWidget {
 
   Widget _buildOrderCard(Map<String, dynamic> order, BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(
+        bottom: MediaQuery.of(context).size.height * 0.01,
+      ),
       elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(
+          MediaQuery.of(context).size.width * 0.02,
+        ),
+      ),
       child: InkWell(
         onTap: () {
-          // Navigate to individual order report page
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => IndividualOrderReportPage(order: order),
+              builder: (context) => IndividualPostReportPage(order: order),
             ),
           );
         },
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(
+          MediaQuery.of(context).size.width * 0.02,
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.03),
           child: Row(
             children: [
               // Order Info
@@ -324,26 +358,30 @@ class Postsalefollowup extends StatelessWidget {
                   children: [
                     Text(
                       order['name'] ?? 'N/A',
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: TextStyle(
+                        fontSize: MediaQuery.of(context).size.width * 0.035,
                         fontWeight: FontWeight.w600,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.005,
+                    ),
                     Text(
                       'ID: ${order['orderId'] ?? 'N/A'}',
                       style: TextStyle(
                         color: Colors.grey.shade600,
-                        fontSize: 11,
+                        fontSize: MediaQuery.of(context).size.width * 0.028,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.005,
+                    ),
                     Text(
                       order['place'] ?? 'N/A',
                       style: TextStyle(
                         color: Colors.grey.shade700,
-                        fontSize: 12,
+                        fontSize: MediaQuery.of(context).size.width * 0.03,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -355,29 +393,33 @@ class Postsalefollowup extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: MediaQuery.of(context).size.width * 0.015,
+                      vertical: MediaQuery.of(context).size.height * 0.005,
                     ),
                     decoration: BoxDecoration(
-                      color: controller.getStatusColor(order['status'] ?? ''),
-                      borderRadius: BorderRadius.circular(8),
+                      color: controller.getOrderStatusColor(
+                        order['order_status'] ?? '',
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        MediaQuery.of(context).size.width * 0.02,
+                      ),
                     ),
                     child: Text(
-                      order['status'] ?? 'N/A',
+                      order['order_status'] ?? 'N/A',
                       style: TextStyle(
-                        color: controller.getStatusTextColor(
-                          order['status'] ?? '',
+                        color: controller.getOrderStatusTextColor(
+                          order['order_status'] ?? '',
                         ),
-                        fontSize: 10,
+                        fontSize: MediaQuery.of(context).size.width * 0.025,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.005),
                   Icon(
                     Icons.arrow_forward_ios,
-                    size: 12,
+                    size: MediaQuery.of(context).size.width * 0.03,
                     color: Colors.grey.shade400,
                   ),
                 ],
@@ -389,86 +431,133 @@ class Postsalefollowup extends StatelessWidget {
     );
   }
 
-  Widget _buildPagination() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        border: Border(top: BorderSide(color: Colors.grey.shade300)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Previous Button
-          ElevatedButton.icon(
-            onPressed: controller.currentPage.value > 0
-                ? controller.previousPage
-                : null,
-            icon: const Icon(Icons.chevron_left, size: 18),
-            label: const Text('Previous'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
+  Widget _buildShimmerCard(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Card(
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height * 0.01,
+        ),
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            MediaQuery.of(context).size.width * 0.02,
           ),
-          // Page Numbers
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (int i = 0; i < controller.totalPages.value; i++)
-                  if (i < 5 ||
-                      (i >= controller.currentPage.value - 2 &&
-                          i <= controller.currentPage.value + 2))
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.03),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      child: GestureDetector(
-                        onTap: () => controller.goToPage(i),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: i == controller.currentPage.value
-                                ? Colors.blue.shade600
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.blue.shade600),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${i + 1}',
-                              style: TextStyle(
-                                color: i == controller.currentPage.value
-                                    ? Colors.white
-                                    : Colors.blue.shade600,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                      width: MediaQuery.of(context).size.width * 0.3,
+                      height: MediaQuery.of(context).size.height * 0.02,
+                      color: Colors.white,
                     ),
-              ],
-            ),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.005,
+                    ),
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.2,
+                      height: MediaQuery.of(context).size.height * 0.015,
+                      color: Colors.white,
+                    ),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.005,
+                    ),
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.25,
+                      height: MediaQuery.of(context).size.height * 0.015,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    width: MediaQuery.of(context).size.width * 0.15,
+                    height: MediaQuery.of(context).size.height * 0.02,
+                    color: Colors.white,
+                  ),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.005),
+                  Container(
+                    width: MediaQuery.of(context).size.width * 0.03,
+                    height: MediaQuery.of(context).size.width * 0.03,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ],
           ),
-          // Next Button
-          ElevatedButton.icon(
-            onPressed:
-                controller.currentPage.value < controller.totalPages.value - 1
-                ? controller.nextPage
-                : null,
-            icon: const Icon(Icons.chevron_right, size: 18),
-            label: const Text('Next'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildShimmerList(BuildContext context, int visibleTiles) {
+    return ListView.builder(
+      padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+      itemCount: visibleTiles,
+      itemBuilder: (context, index) => _buildShimmerCard(context),
+    );
+  }
+
+  void _showExportOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Export Order As',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.picture_as_pdf),
+                    label: const Text('PDF'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      controller.exportToPdf();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.grid_on),
+                    label: const Text('Excel'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      controller.exportToExcel();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
