@@ -17,9 +17,12 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
   MediaStream? _remoteStream;
   final _firestore = FirebaseFirestore.instance;
 
+  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+
   @override
   void initState() {
     super.initState();
+    _remoteRenderer.initialize();
     _setupConnection();
   }
 
@@ -32,11 +35,52 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
 
     _peerConnection = await createPeerConnection(config);
 
+    _peerConnection!.onConnectionState = (RTCPeerConnectionState state) {
+      print("🔌 PeerConnection state: $state");
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+        print("🛑 Connection lost. Stopping playback.");
+        setState(() {
+          _remoteStream = null;
+          _remoteRenderer.srcObject = null;
+        });
+      }
+    };
+
     _peerConnection!.onTrack = (RTCTrackEvent event) {
       print("📥 Track event received: ${event.track.kind}");
+
       if (event.track.kind == 'audio') {
+        event.track.onEnded = () {
+          print("🛑 Audio track ended");
+          setState(() {
+            _remoteStream = null;
+            _remoteRenderer.srcObject = null;
+          });
+        };
+
         setState(() {
           _remoteStream = event.streams.first;
+          _remoteRenderer.srcObject = _remoteStream;
+        });
+
+        // 🔎 Log audio track info
+        print(
+          "🎧 Remote stream has ${_remoteStream!.getAudioTracks().length} audio tracks",
+        );
+        for (var track in _remoteStream!.getAudioTracks()) {
+          print(
+            "🔊 Track ID: ${track.id}, Enabled: ${track.enabled}, Muted: ${track.muted}",
+          );
+        }
+
+        _peerConnection?.getReceivers().then((receivers) {
+          for (var receiver in receivers) {
+            print(
+              "🔍 Receiver: ${receiver.track?.kind}, enabled: ${receiver.track?.enabled}",
+            );
+          }
         });
       }
     };
@@ -59,6 +103,7 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
     }
 
     final offer = roomSnapshot.data()!['offer'];
+
     await _peerConnection!.addTransceiver(
       kind: RTCRtpMediaType.RTCRtpMediaTypeAudio,
       init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
@@ -68,12 +113,6 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
       RTCSessionDescription(offer['sdp'], offer['type']),
     );
     print("✅ Offer set as remote description");
-
-    // Add transceiver to receive audio
-    await _peerConnection!.addTransceiver(
-      kind: RTCRtpMediaType.RTCRtpMediaTypeAudio,
-      init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
-    );
 
     final answer = await _peerConnection!.createAnswer();
     await _peerConnection!.setLocalDescription(answer);
@@ -97,6 +136,19 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
 
   @override
   void dispose() {
+    // 🔴 Mark as disconnected in Firestore
+    _firestore
+        .collection('calls')
+        .doc(widget.userId)
+        .update({'status': 'disconnected'})
+        .then((_) {
+          print("📡 Status updated to disconnected");
+        })
+        .catchError((error) {
+          print("⚠️ Failed to update status: $error");
+        });
+
+    _remoteRenderer.dispose();
     _peerConnection?.close();
     _remoteStream?.dispose();
     super.dispose();
@@ -106,10 +158,19 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Admin: Listening")),
-      body: Center(
-        child: _remoteStream != null
-            ? const Text("🔊 Receiving live audio...")
-            : const Text("⏳ Waiting for user to start streaming..."),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text("🎙️ Admin Audio Listener"),
+          const SizedBox(height: 20),
+          _remoteStream != null
+              ? const Text("🔊 Receiving live audio...")
+              : const Text("⏳ Waiting for user to start streaming..."),
+          const SizedBox(height: 20),
+
+          // 🔈 This invisible widget plays the audio
+          SizedBox(width: 0, height: 0, child: RTCVideoView(_remoteRenderer)),
+        ],
       ),
     );
   }

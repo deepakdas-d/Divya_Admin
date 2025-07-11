@@ -34,7 +34,7 @@ dependencies:
   get: ^4.7.2
   geolocator: ^14.0.1
   geocoding: ^4.0.0
-  flutter_webrtc: ^0.14.1
+
   intl: ^0.20.2
   excel: ^4.0.6
   path_provider: ^2.1.5
@@ -42,6 +42,8 @@ dependencies:
   velocity_x: ^4.3.1
   shimmer: ^3.0.0
   pdf: ^3.11.3
+  audioplayers: ^6.5.0
+  flutter_webrtc: ^0.14.2
  
 
 dev_dependencies:
