@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lottie/lottie.dart';
 
 class AdminAudioListenPage extends StatefulWidget {
   final String userId;
@@ -136,7 +137,6 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
 
   @override
   void dispose() {
-    // 🔴 Mark as disconnected in Firestore
     _firestore
         .collection('calls')
         .doc(widget.userId)
@@ -161,15 +161,29 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text("🎙️ Admin Audio Listener"),
           const SizedBox(height: 20),
           _remoteStream != null
-              ? const Text("🔊 Receiving live audio...")
-              : const Text("⏳ Waiting for user to start streaming..."),
-          const SizedBox(height: 20),
-
-          // 🔈 This invisible widget plays the audio
-          SizedBox(width: 0, height: 0, child: RTCVideoView(_remoteRenderer)),
+              ? Expanded(
+                  child: Center(
+                    child: Lottie.asset(
+                      "assets/lottie/microphone.json",
+                      height: double.infinity,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                )
+              : Expanded(
+                  child: Center(
+                    child: Lottie.asset(
+                      "assets/lottie/No internet connection.json",
+                      height: double.infinity,
+                      width: double.infinity,
+                      fit: BoxFit
+                          .contain, // or BoxFit.cover, depending on your needs
+                    ),
+                  ),
+                ),
         ],
       ),
     );

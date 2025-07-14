@@ -1,6 +1,6 @@
+import 'package:admin/Screens/Sales/individual_user_details.dart';
 import 'package:admin/Screens/Users/addusers.dart';
 import 'package:admin/Screens/Users/filter.dart';
-import 'package:admin/Voice/admin_audio_listener.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -320,7 +320,8 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AdminAudioListenPage(userId: userId),
+              builder: (context) =>
+                  IndividualUserDetails(userId: userId, userData: userData),
             ),
           );
         },
