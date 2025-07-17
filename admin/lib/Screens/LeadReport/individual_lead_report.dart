@@ -288,12 +288,24 @@ class LeadDetailPage extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'Lead ID: ${lead['leadId'] ?? 'N/A'}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade600,
-                      ),
+                    Column(
+                      children: [
+                        Text(
+                          'Customer ID: ${lead['customerId'] ?? 'N/A'}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+
+                        Text(
+                          'Lead ID: ${lead['leadId'] ?? 'N/A'}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
                     if (lead['isArchived'] == true)
                       Container(
