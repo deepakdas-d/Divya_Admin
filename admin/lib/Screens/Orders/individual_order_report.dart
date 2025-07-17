@@ -24,6 +24,7 @@ class IndividualOrderReportPage extends StatelessWidget {
       final headers = [
         'Order ID',
         'Name',
+        'CustomerID',
         'Primary Phone',
         'Secondary Phone',
         'Address',
@@ -36,11 +37,13 @@ class IndividualOrderReportPage extends StatelessWidget {
         'Nos',
         'Remark',
         'maker',
+        'Cancel',
       ];
 
       final values = [
         order['orderId'] ?? '',
         order['name'] ?? '',
+        order['customerId'] ?? '',
         order['phone1'] ?? '',
         order['phone2'] ?? '',
         order['address'] ?? '',
@@ -53,6 +56,7 @@ class IndividualOrderReportPage extends StatelessWidget {
         order['nos']?.toString() ?? '',
         order['remark'] ?? '',
         order['maker'] ?? '',
+        order['Cancel']?.toString() ?? '',
       ];
 
       for (int i = 0; i < headers.length; i++) {
@@ -68,6 +72,13 @@ class IndividualOrderReportPage extends StatelessWidget {
             .value = TextCellValue(
           values[i],
         );
+        if (i == 15 && order['Cancel'] == true) {
+          sheet
+              .cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 1))
+              .cellStyle = CellStyle(
+            backgroundColorHex: ExcelColor.red200,
+          );
+        }
       }
 
       final timestamp = DateTime.now().toString().split('.')[0];
@@ -125,6 +136,7 @@ class IndividualOrderReportPage extends StatelessWidget {
                 pw.SizedBox(height: 16),
                 _pdfRow('Order ID', order['orderId']),
                 _pdfRow('Name', order['name']),
+                _pdfRow('CustomerID', order['customerId']),
                 _pdfRow('Primary Phone', order['phone1']),
                 if (order['phone2'] != null &&
                     order['phone2'].toString().isNotEmpty)
@@ -150,6 +162,7 @@ class IndividualOrderReportPage extends StatelessWidget {
                       '',
                 ),
                 _pdfRow('Nos', order['nos']?.toString()),
+
                 if (order['remark'] != null &&
                     order['remark'].toString().isNotEmpty)
                   pw.Column(
@@ -245,61 +258,84 @@ class IndividualOrderReportPage extends StatelessWidget {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            order['name'] ?? 'N/A',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (order['Cancel'] == true)
+                        ? const Color.fromARGB(
+                            255,
+                            255,
+                            111,
+                            133,
+                          ) // light reddish background if canceled
+                        : Colors.white, // default background
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Column(
+                              children: [
+                                Text(
+                                  order['name'] ?? 'N/A',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  order['customerId'] ?? 'N/A',
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        // Status Badges
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getOrderStatusColor(
-                                  order['order_status'] ?? '',
+
+                          // Status Badges
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
                                 ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                order['order_status'] ?? 'N/A',
-                                style: TextStyle(
-                                  color: _getOrderStatusTextColor(
+                                decoration: BoxDecoration(
+                                  color: _getOrderStatusColor(
                                     order['order_status'] ?? '',
                                   ),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  order['order_status'] ?? 'N/A',
+                                  style: TextStyle(
+                                    color: _getOrderStatusTextColor(
+                                      order['order_status'] ?? '',
+                                    ),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Order ID: ${order['orderId'] ?? 'N/A'}',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Order ID: ${order['orderId'] ?? 'N/A'}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -363,6 +399,14 @@ class IndividualOrderReportPage extends StatelessWidget {
                 order['remark'].toString().isNotEmpty)
               _buildSectionCard('Additional Information', Icons.note, [
                 _buildDetailRow(Icons.note, 'Remark', order['remark']),
+              ]),
+            if (order['Cancel'] == true)
+              _buildSectionCard('CANCEL', Icons.note, [
+                _buildDetailRow(
+                  Icons.note,
+                  'Cancel',
+                  'Cancelled',
+                ), // Optional: convert bool to string
               ]),
           ],
         ),

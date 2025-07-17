@@ -101,7 +101,7 @@ class SigninController extends GetxController {
     Get.back(); // Remove loading
 
     if (result == null) {
-      Get.offAll(() => const Dashboard());
+      Get.offAll(() => Dashboard());
       Get.snackbar(
         "Success",
         "Signed in successfully",

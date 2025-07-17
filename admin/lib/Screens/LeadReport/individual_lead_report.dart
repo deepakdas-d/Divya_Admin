@@ -38,6 +38,7 @@ class LeadDetailPage extends StatelessWidget {
       final headers = [
         'Lead ID',
         'Name',
+        'CustomerID',
         'Primary Phone',
         'Secondary Phone',
         'Address',
@@ -54,6 +55,7 @@ class LeadDetailPage extends StatelessWidget {
       final values = [
         lead['leadId'] ?? '',
         lead['name'] ?? '',
+        lead['customerId'] ?? "",
         lead['phone1'] ?? '',
         lead['phone2'] ?? '',
         lead['address'] ?? '',
@@ -137,6 +139,7 @@ class LeadDetailPage extends StatelessWidget {
                 pw.SizedBox(height: 16),
                 _pdfRow('Lead ID', lead['leadId']),
                 _pdfRow('Name', lead['name']),
+                _pdfRow('CustomerID', lead['customerId'] ?? ''),
                 _pdfRow('Primary Phone', lead['phone1']),
                 if (lead['phone2'] != null &&
                     lead['phone2'].toString().isNotEmpty)

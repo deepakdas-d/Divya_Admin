@@ -139,6 +139,7 @@ class LeadReportController extends GetxController {
           'remark': data['remark'] ?? '',
           'salesman': salesmanName,
           'status': data['status'] ?? '',
+          'customerId': data['customerId'],
         });
 
         final place = data['place']?.toString().trim();
@@ -305,6 +306,7 @@ class LeadReportController extends GetxController {
       final headers = [
         'Lead ID',
         'Name',
+        'CustomerID',
         'Address',
         'Place',
         'Phone1',
@@ -321,6 +323,7 @@ class LeadReportController extends GetxController {
 
       final columnWidths = [
         15,
+        20,
         20,
         30,
         20,
@@ -355,6 +358,7 @@ class LeadReportController extends GetxController {
         final rowData = [
           lead['leadId'] ?? '',
           lead['name'] ?? '',
+          lead['customerId'] ?? "",
           lead['address'] ?? '',
           lead['place'] ?? '',
           lead['phone1'] ?? '',
@@ -478,6 +482,7 @@ class LeadReportController extends GetxController {
                   pw.SizedBox(height: 16),
                   _pdfRow('Lead ID', lead['leadId'] ?? ''),
                   _pdfRow('Name', lead['name'] ?? ''),
+                  _pdfRow('CustomerID', lead['customerId'] ?? ''),
                   _pdfRow('Primary Phone', lead['phone1'] ?? ''),
                   if (lead['phone2'] != null &&
                       lead['phone2'].toString().isNotEmpty)

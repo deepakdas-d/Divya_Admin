@@ -1,4 +1,5 @@
 import 'package:admin/Auth/sigin.dart';
+import 'package:admin/Controller/home_controller.dart';
 import 'package:admin/Screens/Complaint/ComplaintPage.dart';
 import 'package:admin/Screens/LeadReport/LeadReportPage.dart';
 import 'package:admin/Screens/Maker/MakerManagementPage.dart';
@@ -9,11 +10,12 @@ import 'package:admin/Screens/product/listproducts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Dashboard extends StatelessWidget {
-  const Dashboard({super.key});
-
+  Dashboard({super.key});
+  final HomeController controller = Get.put(HomeController());
   Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     Navigator.of(context).pushAndRemoveUntil(
@@ -390,24 +392,27 @@ class Dashboard extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _buildStatCard(
-            'Total Sales',
-            '₹2,45,670',
-            Icons.trending_up,
-            const Color(0xFF10B981),
-            '+12.5%',
-            screenSize,
+          child: Obx(
+            () => _buildStatCard(
+              'Total Sales',
+              controller.totalsalescount.value.toString(),
+              Icons.trending_up,
+              const Color(0xFF10B981),
+              screenSize,
+            ),
           ),
         ),
         SizedBox(width: screenSize.width * 0.03),
         Expanded(
-          child: _buildStatCard(
-            'Active Orders',
-            '147',
-            Icons.shopping_cart,
-            const Color(0xFF3B82F6),
-            '+8.2%',
-            screenSize,
+          child: Obx(
+            () => _buildStatCard(
+              'Active Orders',
+              controller.totalordercount.value.toString(),
+              Icons.shopping_cart,
+              const Color(0xFF3B82F6),
+
+              screenSize,
+            ),
           ),
         ),
       ],
@@ -419,7 +424,7 @@ class Dashboard extends StatelessWidget {
     String value,
     IconData icon,
     Color color,
-    String change,
+
     Size screenSize,
   ) {
     return Container(
@@ -449,14 +454,14 @@ class Dashboard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: color, size: screenSize.width * 0.05),
               ),
-              Text(
-                change,
-                style: TextStyle(
-                  color: const Color(0xFF10B981),
-                  fontSize: screenSize.width * 0.03,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              // Text(
+              //   change,
+              //   style: TextStyle(
+              //     color: const Color(0xFF10B981),
+              //     fontSize: screenSize.width * 0.03,
+              //     fontWeight: FontWeight.w600,
+              //   ),
+              // ),
             ],
           ),
           SizedBox(height: screenSize.height * 0.01),

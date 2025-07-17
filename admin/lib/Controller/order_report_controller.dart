@@ -148,6 +148,7 @@ class OrderReportController extends GetxController {
         final String? makerID = data['makerId'];
         final String maker = await getmakerName(makerID);
         log('Maker is $maker');
+        log("Cancel is ${data['Cancel']}");
 
         tempOrders.add({
           'address': data['address'] ?? '',
@@ -169,6 +170,8 @@ class OrderReportController extends GetxController {
           'status': data['status'] ?? '',
           'followUpNotes': data['followUpNotes'] ?? '',
           'maker': maker,
+          'Cancel': data['Cancel'],
+          'customerId': data['customerId'],
         });
 
         final place = data['place']?.toString().trim();
@@ -335,6 +338,7 @@ class OrderReportController extends GetxController {
       final headers = [
         'Order ID',
         'Customer Name',
+        'Customer ID',
         'Address',
         'Place',
         'Phone1',
@@ -348,12 +352,14 @@ class OrderReportController extends GetxController {
         'Follow Up Date',
         'Nos',
         'Remark',
-        'Maker ',
+        'Maker',
         'Follow Up Notes',
+        'Cancel',
       ];
 
       final columnWidths = [
         15,
+        20,
         20,
         30,
         20,
@@ -369,6 +375,7 @@ class OrderReportController extends GetxController {
         10,
         25,
         25,
+        20,
         20,
       ];
 
@@ -391,6 +398,7 @@ class OrderReportController extends GetxController {
         final rowData = [
           order['orderId'] ?? '',
           order['name'] ?? '',
+          order['customerId'] ?? '',
           order['address'] ?? '',
           order['place'] ?? '',
           order['phone1'] ?? '',
@@ -406,6 +414,7 @@ class OrderReportController extends GetxController {
           order['remark'] ?? '',
           order['maker'] ?? '',
           order['followUpNotes'] ?? '',
+          order['Cancel']?.toString() ?? '',
         ];
 
         for (int colIndex = 0; colIndex < rowData.length; colIndex++) {
@@ -417,7 +426,8 @@ class OrderReportController extends GetxController {
           );
           cell.value = TextCellValue(rowData[colIndex]);
 
-          if (colIndex == 8) {
+          // Conditional formatting
+          if (colIndex == 9) {
             final status = order['status'];
             cell.cellStyle = CellStyle(
               backgroundColorHex: status == 'delivered'
@@ -434,7 +444,7 @@ class OrderReportController extends GetxController {
             );
           }
 
-          if (colIndex == 9) {
+          if (colIndex == 10) {
             final orderStatus = order['order_status'];
             cell.cellStyle = CellStyle(
               backgroundColorHex: orderStatus == 'delivered'
@@ -449,6 +459,10 @@ class OrderReportController extends GetxController {
                   ? ExcelColor.red200
                   : ExcelColor.white,
             );
+          }
+
+          if (colIndex == 18 && order['Cancel'] == true) {
+            cell.cellStyle = CellStyle(backgroundColorHex: ExcelColor.red200);
           }
         }
       }
@@ -481,7 +495,6 @@ class OrderReportController extends GetxController {
       final file = File(
         '${downloadsDir.path}/orders_data_${DateTime.now().millisecondsSinceEpoch}.xlsx',
       );
-
       await file.writeAsBytes(bytes);
 
       Get.snackbar(
@@ -492,6 +505,7 @@ class OrderReportController extends GetxController {
         colorText: Colors.white,
       );
     } catch (e) {
+      log('Export failed: $e');
       Get.snackbar(
         'Error',
         'Export failed: $e',
