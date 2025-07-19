@@ -18,6 +18,7 @@ class HomeController extends GetxController {
     super.onInit();
     totalSalescount();
     totalOrdercount();
+    fetchYearlySalesData();
   }
 
   //Count of Order Delivered
@@ -86,7 +87,7 @@ class HomeController extends GetxController {
 
         final snapshot = await _firestore
             .collection("Orders")
-            .where('order_status', isEqualTo: "delivered")
+            .where('order_status', isEqualTo: 'delivered')
             .where(
               'createdAt',
               isGreaterThanOrEqualTo: Timestamp.fromDate(start),
@@ -94,7 +95,8 @@ class HomeController extends GetxController {
             .where('createdAt', isLessThan: Timestamp.fromDate(end))
             .get();
 
-        tempSpots.add(FlSpot((i - 1).toDouble(), snapshot.size.toDouble()));
+        final count = snapshot.size.toDouble();
+        tempSpots.add(FlSpot((i - 1).toDouble(), count)); // Always add
       }
 
       yearlySalesSpots.value = tempSpots;

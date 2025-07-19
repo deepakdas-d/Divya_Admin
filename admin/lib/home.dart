@@ -454,14 +454,6 @@ class Dashboard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: color, size: screenSize.width * 0.05),
               ),
-              // Text(
-              //   change,
-              //   style: TextStyle(
-              //     color: const Color(0xFF10B981),
-              //     fontSize: screenSize.width * 0.03,
-              //     fontWeight: FontWeight.w600,
-              //   ),
-              // ),
             ],
           ),
           SizedBox(height: screenSize.height * 0.01),
@@ -525,18 +517,31 @@ class Dashboard extends StatelessWidget {
             Expanded(
               child: Obx(() {
                 final data = controller.yearlySalesSpots;
+                if (data.isEmpty) {
+                  return Center(
+                    child: Text(
+                      "No sales data available",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: screenSize.width * 0.04,
+                      ),
+                    ),
+                  );
+                }
+
+                final maxY = data
+                    .map((e) => e.y)
+                    .reduce((a, b) => a > b ? a : b);
+                final roundedMaxY = ((maxY + 19) ~/ 20) * 20;
 
                 return LineChart(
                   LineChartData(
                     minY: 0,
-                    maxY: data.isNotEmpty
-                        ? data.map((e) => e.y).reduce((a, b) => a > b ? a : b) +
-                              5
-                        : 10,
+                    maxY: roundedMaxY.toDouble(),
                     gridData: FlGridData(
                       show: true,
                       drawVerticalLine: false,
-                      horizontalInterval: 5,
+                      horizontalInterval: 20,
                       getDrawingHorizontalLine: (value) => FlLine(
                         color: const Color(0xFFE2E8F0),
                         strokeWidth: 1,
@@ -544,7 +549,23 @@ class Dashboard extends StatelessWidget {
                     ),
                     titlesData: FlTitlesData(
                       leftTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          interval: 10,
+                          reservedSize: 40,
+                          getTitlesWidget: (value, meta) {
+                            if (value % 10 == 0 && value != 0) {
+                              return Text(
+                                value.toInt().toString(),
+                                style: TextStyle(
+                                  color: const Color(0xFF64748B),
+                                  fontSize: screenSize.width * 0.028,
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
                       ),
                       rightTitles: AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
@@ -571,8 +592,11 @@ class Dashboard extends StatelessWidget {
                               'Nov',
                               'Dec',
                             ];
+
+                            final currentMonth = DateTime.now().month;
+
                             if (value.toInt() >= 0 &&
-                                value.toInt() < months.length) {
+                                value.toInt() < currentMonth) {
                               return Text(
                                 months[value.toInt()],
                                 style: TextStyle(
@@ -581,7 +605,7 @@ class Dashboard extends StatelessWidget {
                                 ),
                               );
                             }
-                            return const Text('');
+                            return const SizedBox.shrink(); // Hide future months
                           },
                         ),
                       ),
@@ -589,7 +613,12 @@ class Dashboard extends StatelessWidget {
                     borderData: FlBorderData(show: false),
                     lineBarsData: [
                       LineChartBarData(
-                        spots: data,
+                        spots: data
+                            .where(
+                              (spot) =>
+                                  spot.x < DateTime.now().month.toDouble(),
+                            )
+                            .toList(), // Filter to current month only
                         isCurved: true,
                         gradient: const LinearGradient(
                           colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
