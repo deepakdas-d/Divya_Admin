@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.techfifo.admin">
 
     <!-- Basic Network and Audio Permissions -->
@@ -10,14 +11,13 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_PRIVILEGED" tools:ignore="ProtectedPermissions"/>
 
     <!-- Camera -->
     <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- Storage Permissions -->
-    <!-- Android 13+ -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <!-- Android 10–12 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 

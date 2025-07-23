@@ -374,32 +374,48 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
   //storing methode call.
   Future<void> startRecording() async {
     final micStatus = await Permission.microphone.request();
+
+    // Handle Android version-specific permissions
+    final androidInfo = await DeviceInfoPlugin().androidInfo;
+    final sdkInt = androidInfo.version.sdkInt;
+
     PermissionStatus storageStatus;
-    if (Platform.isAndroid &&
-        (await DeviceInfoPlugin().androidInfo).version.sdkInt >= 33) {
+    if (Platform.isAndroid && sdkInt >= 33) {
       storageStatus = await Permission.audio.request(); // Android 13+
     } else {
       storageStatus = await Permission.storage
           .request(); // Android 12 and below
     }
 
-    print('Microphone permission status: $micStatus');
-    print('Storage permission status: $storageStatus');
+    // 🔌 Bluetooth (Android 12+)
+    PermissionStatus bluetoothStatus = PermissionStatus.granted;
+    if (Platform.isAndroid && sdkInt >= 31) {
+      bluetoothStatus = await Permission.bluetoothConnect.request();
+    }
 
-    if (micStatus.isGranted && storageStatus.isGranted) {
+    print('🎤 Microphone permission: $micStatus');
+    print('💽 Storage/Audio permission: $storageStatus');
+    print('🎧 Bluetooth permission: $bluetoothStatus');
+
+    // All permissions granted
+    if (micStatus.isGranted &&
+        storageStatus.isGranted &&
+        bluetoothStatus.isGranted) {
       final savePath = await _getSavePath();
-      print("Saving to: $savePath");
+      print("💾 Saving to: $savePath");
       await _channel.invokeMethod("startRecording", {"path": savePath});
-    } else if (micStatus.isPermanentlyDenied ||
-        storageStatus.isPermanentlyDenied) {
-      print("❌ Permission permanently denied");
+    }
+    // Any permission permanently denied
+    else if (micStatus.isPermanentlyDenied ||
+        storageStatus.isPermanentlyDenied ||
+        bluetoothStatus.isPermanentlyDenied) {
       if (!mounted) return;
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text("Permission Required"),
           content: const Text(
-            "Please grant microphone and storage/audio permissions from settings.",
+            "Please grant microphone, storage/audio, and Bluetooth permissions from settings.",
           ),
           actions: [
             TextButton(
@@ -416,8 +432,10 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
           ],
         ),
       );
-    } else {
-      print("🙅 Permission denied (not permanently)");
+    }
+    // Denied (but not permanently)
+    else {
+      print("🙅 Permissions denied (not permanently)");
     }
   }
 
