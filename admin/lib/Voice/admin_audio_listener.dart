@@ -34,12 +34,12 @@
 //       final videoTracks = _remoteStream?.getVideoTracks() ?? [];
 //       if (videoTracks.isNotEmpty && videoTracks.first.enabled) {
 //         if (!_isVideoLive) {
-//           print("📹 Video stream is active");
+//           log("📹 Video stream is active");
 //           setState(() => _isVideoLive = true);
 //         }
 //       } else {
 //         if (_isVideoLive) {
-//           print("⚠️ Video stream lost");
+//           log("⚠️ Video stream lost");
 //           setState(() => _isVideoLive = false);
 //         }
 //       }
@@ -56,13 +56,13 @@
 //     _peerConnection = await createPeerConnection(config);
 
 //     _peerConnection!.onConnectionState = (RTCPeerConnectionState state) {
-//       print("🔌 Connection state changed: $state");
+//       log("🔌 Connection state changed: $state");
 //       if ({
 //         RTCPeerConnectionState.RTCPeerConnectionStateDisconnected,
 //         RTCPeerConnectionState.RTCPeerConnectionStateFailed,
 //         RTCPeerConnectionState.RTCPeerConnectionStateClosed,
 //       }.contains(state)) {
-//         print("🛑 Connection lost, clearing UI...");
+//         log("🛑 Connection lost, clearing UI...");
 //         setState(() {
 //           _remoteStream = null;
 //           _remoteRenderer.srcObject = null;
@@ -71,27 +71,27 @@
 //     };
 
 //     _peerConnection!.onTrack = (RTCTrackEvent event) {
-//       print("📥 Track received: ${event.track.kind}");
+//       log("📥 Track received: ${event.track.kind}");
 
 //       if (event.streams.isNotEmpty && _remoteStream == null) {
 //         _remoteStream = event.streams.first;
 //         _remoteRenderer.srcObject = _remoteStream;
-//         print("✅ Remote stream set");
+//         log("✅ Remote stream set");
 
 //         for (var track in _remoteStream!.getTracks()) {
-//           print(
+//           log(
 //             "🔊 Track ID: ${track.id}, kind: ${track.kind}, enabled: ${track.enabled}",
 //           );
 //         }
 //       }
 
 //       event.track.onEnded = () {
-//         print("🛑 Track ended: ${event.track.kind}");
+//         log("🛑 Track ended: ${event.track.kind}");
 //       };
 //     };
 
 //     _peerConnection!.onIceCandidate = (candidate) {
-//       print("❄️ Local ICE candidate: ${candidate.candidate}");
+//       log("❄️ Local ICE candidate: ${candidate.candidate}");
 //       _firestore
 //           .collection('calls')
 //           .doc(widget.userId)
@@ -114,7 +114,7 @@
 //     final roomSnapshot = await roomRef.get();
 
 //     if (!roomSnapshot.exists || roomSnapshot.data()?['offer'] == null) {
-//       print("❌ No offer found in Firestore for user ${widget.userId}");
+//       log("❌ No offer found in Firestore for user ${widget.userId}");
 //       return;
 //     }
 
@@ -122,12 +122,12 @@
 //     await _peerConnection!.setRemoteDescription(
 //       RTCSessionDescription(offer['sdp'], offer['type']),
 //     );
-//     print("📥 Offer set as remote description");
+//     log("📥 Offer set as remote description");
 
 //     final answer = await _peerConnection!.createAnswer();
 //     await _peerConnection!.setLocalDescription(answer);
 //     await roomRef.update({'answer': answer.toMap()});
-//     print("📤 Answer sent to Firestore");
+//     log("📤 Answer sent to Firestore");
 
 //     // Listen for ICE candidates from caller
 //     roomRef.collection('callerCandidates').snapshots().listen((snapshot) {
@@ -142,7 +142,7 @@
 //           data['sdpMLineIndex'],
 //         );
 //         _peerConnection?.addCandidate(candidate);
-//         print("📥 Remote ICE candidate added: ${candidate.candidate}");
+//         log("📥 Remote ICE candidate added: ${candidate.candidate}");
 //       }
 //     });
 //   }
@@ -156,7 +156,7 @@
 //     final newCamera = currentCamera == 'rear' ? 'front' : 'rear';
 
 //     await docRef.update({'camera': newCamera});
-//     print("📸 Camera toggled to $newCamera.");
+//     log("📸 Camera toggled to $newCamera.");
 //   }
 
 //   @override
@@ -165,8 +165,8 @@
 //         .collection('calls')
 //         .doc(widget.userId)
 //         .update({'status': 'disconnected'})
-//         .then((_) => print("📡 Status set to disconnected"))
-//         .catchError((e) => print("⚠️ Failed to update status: $e"));
+//         .then((_) => log("📡 Status set to disconnected"))
+//         .catchError((e) => log("⚠️ Failed to update status: $e"));
 
 //     _remoteRenderer.dispose();
 //     _peerConnection?.close();
@@ -227,6 +227,7 @@
 //     );
 //   }
 // }
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
@@ -254,7 +255,7 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
   final _firestore = FirebaseFirestore.instance;
   static const _channel = MethodChannel('audio_record_channel');
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-
+  String _recordingStatus = '';
   @override
   void initState() {
     super.initState();
@@ -273,11 +274,11 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
     _peerConnection = await createPeerConnection(config);
 
     _peerConnection!.onConnectionState = (RTCPeerConnectionState state) {
-      print("🔌 PeerConnection state: $state");
+      log("🔌 PeerConnection state: $state");
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
-        print("🛑 Connection lost. Stopping playback.");
+        log("🛑 Connection lost. Stopping playback.");
         setState(() {
           _remoteStream = null;
           _remoteRenderer.srcObject = null;
@@ -286,11 +287,11 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
     };
 
     _peerConnection!.onTrack = (RTCTrackEvent event) {
-      print("📥 Track event received: ${event.track.kind}");
+      log("📥 Track event received: ${event.track.kind}");
 
       if (event.track.kind == 'audio') {
         event.track.onEnded = () {
-          print("🛑 Audio track ended");
+          log("🛑 Audio track ended");
           setState(() {
             _remoteStream = null;
             _remoteRenderer.srcObject = null;
@@ -303,18 +304,18 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
         });
 
         // 🔎 Log audio track info
-        print(
+        log(
           "🎧 Remote stream has ${_remoteStream!.getAudioTracks().length} audio tracks",
         );
         for (var track in _remoteStream!.getAudioTracks()) {
-          print(
+          log(
             "🔊 Track ID: ${track.id}, Enabled: ${track.enabled}, Muted: ${track.muted}",
           );
         }
 
         _peerConnection?.getReceivers().then((receivers) {
           for (var receiver in receivers) {
-            print(
+            log(
               "🔍 Receiver: ${receiver.track?.kind}, enabled: ${receiver.track?.enabled}",
             );
           }
@@ -335,7 +336,7 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
     final roomSnapshot = await roomRef.get();
 
     if (!roomSnapshot.exists || roomSnapshot.data()?['offer'] == null) {
-      print("❌ No offer found from user.");
+      log("❌ No offer found from user.");
       return;
     }
 
@@ -349,13 +350,13 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
     await _peerConnection!.setRemoteDescription(
       RTCSessionDescription(offer['sdp'], offer['type']),
     );
-    print("✅ Offer set as remote description");
+    log("✅ Offer set as remote description");
 
     final answer = await _peerConnection!.createAnswer();
     await _peerConnection!.setLocalDescription(answer);
 
     await roomRef.update({'answer': answer.toMap()});
-    print("✅ Sent answer to Firestore");
+    log("✅ Sent answer to Firestore");
 
     // Listen for caller's ICE candidates
     roomRef.collection('callerCandidates').snapshots().listen((snapshot) {
@@ -393,22 +394,29 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
       bluetoothStatus = await Permission.bluetoothConnect.request();
     }
 
-    print('🎤 Microphone permission: $micStatus');
-    print('💽 Storage/Audio permission: $storageStatus');
-    print('🎧 Bluetooth permission: $bluetoothStatus');
+    log('🎤 Microphone permission: $micStatus');
+    log('💽 Storage/Audio permission: $storageStatus');
+    log('🎧 Bluetooth permission: $bluetoothStatus');
 
     // All permissions granted
     if (micStatus.isGranted &&
         storageStatus.isGranted &&
         bluetoothStatus.isGranted) {
       final savePath = await _getSavePath();
-      print("💾 Saving to: $savePath");
+      log("💾 Saving to: $savePath");
+
       await _channel.invokeMethod("startRecording", {"path": savePath});
+      setState(() {
+        _recordingStatus = "🔴 Recording started...";
+      });
     }
     // Any permission permanently denied
     else if (micStatus.isPermanentlyDenied ||
         storageStatus.isPermanentlyDenied ||
         bluetoothStatus.isPermanentlyDenied) {
+      setState(() {
+        _recordingStatus = "⚠️ Permission denied.";
+      });
       if (!mounted) return;
       showDialog(
         context: context,
@@ -435,13 +443,16 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
     }
     // Denied (but not permanently)
     else {
-      print("🙅 Permissions denied (not permanently)");
+      log("🙅 Permissions denied (not permanently)");
     }
   }
 
   Future<void> stopRecording() async {
     await _channel.invokeMethod("stopRecording");
-    print("Recording stopped.");
+    log("Recording stopped.");
+    setState(() {
+      _recordingStatus = "⏹️ Recording stopped.";
+    });
   }
 
   Future<String> _getSavePath() async {
@@ -457,10 +468,10 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
         .doc(widget.userId)
         .update({'status': 'disconnected'})
         .then((_) {
-          print("📡 Status updated to disconnected");
+          log("📡 Status updated to disconnected");
         })
         .catchError((error) {
-          print("⚠️ Failed to update status: $error");
+          log("⚠️ Failed to update status: $error");
         });
 
     _remoteRenderer.dispose();
@@ -490,14 +501,30 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
           // 🔈 This invisible widget plays the audio
           SizedBox(width: 0, height: 0, child: RTCVideoView(_remoteRenderer)),
 
-          ElevatedButton(
-            onPressed: () => startRecording(),
-            child: const Text("Start Recording"),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () => startRecording(),
+                child: const Text("Start Recording"),
+              ),
+              ElevatedButton(
+                onPressed: () => stopRecording(),
+                child: const Text("Stop Recording"),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => stopRecording(),
-            child: const Text("Stop Recording"),
-          ),
+          if (_recordingStatus.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                _recordingStatus,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
         ],
       ),
     );
