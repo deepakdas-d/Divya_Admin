@@ -255,7 +255,7 @@ class _AdminAudioListenPageState extends State<AdminAudioListenPage> {
   final _firestore = FirebaseFirestore.instance;
   static const _channel = MethodChannel('audio_record_channel');
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-  String _recordingStatus = '';
+  String _recordingStatus = 'Not Recording';
   @override
   void initState() {
     super.initState();
